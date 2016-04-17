@@ -26,6 +26,7 @@ function callOldReadyEntry(vm, component) {
  * ViewModel constructor
  *
  * @param {string} type
+ * @param {object} options    component options
  * @param {object} parentVm   which contains _app
  * @param {object} parentEl   root element or frag block
  * @param {object} mergedData external data
@@ -33,6 +34,7 @@ function callOldReadyEntry(vm, component) {
  */
 export default function Vm(
   type,
+  options,
   parentVm,
   parentEl,
   mergedData,
@@ -42,13 +44,15 @@ export default function Vm(
   this._app = parentVm._app
   parentVm._childrenVms && parentVm._childrenVms.push(this)
 
-  const component = this._app.customComponentMap[type] || {}
-  const data = component.data || {}
+  if (!options) {
+    options = this._app.customComponentMap[type] || {}
+  }
+  const data = options.data || {}
 
-  this._options = component
-  this._methods = component.methods || {}
-  this._computed = component.computed || {}
-  this._css = component.style || {}
+  this._options = options
+  this._methods = options.methods || {}
+  this._computed = options.computed || {}
+  this._css = options.style || {}
   this._ids = {}
   this._watchers = []
   this._vmEvents = {}
@@ -71,7 +75,7 @@ export default function Vm(
   this.$emit('hook:created')
   this._created = true
   // backward old ready entry
-  callOldReadyEntry(this, component)
+  callOldReadyEntry(this, options)
 
   // if no parentElement then specify the documentElement
   this._parentEl = parentEl || this._app.doc.documentElement

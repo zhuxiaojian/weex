@@ -164,7 +164,7 @@ export function bootstrap(name, config, data) {
 
   perf.start('create vm', cleanName)
 
-  this.vm = new Vm(cleanName, {_app: this}, null, data, {
+  this.vm = new Vm(cleanName, null, {_app: this}, null, data, {
     'hook:ready': () => {
       perf.end('create vm', cleanName)
     }

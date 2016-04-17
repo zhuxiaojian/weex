@@ -149,17 +149,20 @@ export function _generate(target, parentEl, context) {
     }
   }
 
-  let isComponent
-  if (this._app && this._app.customComponentMap && type) {
-    isComponent = this._app.customComponentMap[type]
+  let component
+  if (this._app && this._app.customComponentMap) {
+    component = this._app.customComponentMap[type]
   }
-  else {
-    isComponent = target.component
+  if (this.components) {
+    component = this.components[type]
+  }
+  if (target.component) {
+    component = component || {}
   }
 
-  if (isComponent) {
+  if (component) {
     const Vm = this.constructor
-    const subVm = new Vm(type, subContext, parentEl, undefined, {
+    const subVm = new Vm(type, component, subContext, parentEl, undefined, {
       'hook:init': function () {
         subContext._setId(target.id, null, this)
       },
