@@ -127,8 +127,13 @@ import com.taobao.weex.common.WXRuntimeException;
 import com.taobao.weex.dom.WXDomObject;
 import com.taobao.weex.ui.component.WXComponent;
 import com.taobao.weex.ui.component.WXEventType;
+import com.taobao.weex.ui.component.WXLoading;
+import com.taobao.weex.ui.component.WXRefresh;
 import com.taobao.weex.ui.component.WXVContainer;
-import com.taobao.weex.ui.view.listview.WXRecyclerView;
+import com.taobao.weex.ui.view.listview.BounceRecyclerView;
+import com.taobao.weex.ui.view.listview.IRefreshLayout;
+import com.taobao.weex.ui.view.listview.OnLoadMoreListener;
+import com.taobao.weex.ui.view.listview.OnRefreshListener;
 import com.taobao.weex.ui.view.listview.adapter.IOnLoadMoreListener;
 import com.taobao.weex.ui.view.listview.adapter.IRecyclerAdapterListener;
 import com.taobao.weex.ui.view.listview.adapter.ListBaseViewHolder;
@@ -151,7 +156,6 @@ import java.util.List;
 public class WXListComponent extends WXVContainer implements IRecyclerAdapterListener<ListBaseViewHolder>, IOnLoadMoreListener {
 
   private String TAG = "WXListComponent";
-  private RecyclerViewBaseAdapter recyclerViewBaseAdapter;
   private HashMap<String, Integer> typeList = new HashMap<>();
   private ArrayList<Integer> indoreCells;
   private int listCellCount = 0;
@@ -182,17 +186,28 @@ public class WXListComponent extends WXVContainer implements IRecyclerAdapterLis
 
   @Override
   protected void initView() {
-    mHost = new WXRecyclerView(mContext);
-    recyclerViewBaseAdapter = new RecyclerViewBaseAdapter<>(this);
-    getView().initView(mContext, WXRecyclerView.TYPE_LINEAR_LAYOUT);
+    mHost = new BounceRecyclerView(mContext);
+    RecyclerViewBaseAdapter recyclerViewBaseAdapter = new RecyclerViewBaseAdapter<>(this);
     getView().setAdapter(recyclerViewBaseAdapter);
-    getView().clearOnScrollListeners();
-    getView().addOnScrollListener(new WXRecyclerViewOnScrollListener(this));
+    getView().setOnRefreshListener(new OnRefreshListener() {
+      @Override
+      public void onRefresh() {
+        getView().refreshState();
+      }
+    });
+    getView().setOnLoadMoreListener(new OnLoadMoreListener() {
+      @Override
+      public void onLoadMore() {
+        getView().refreshState();
+      }
+    });
+    getView().getBounceView().clearOnScrollListeners();
+    getView().getBounceView().addOnScrollListener(new WXRecyclerViewOnScrollListener(this));
   }
 
   @Override
-  public WXRecyclerView getView() {
-    return (WXRecyclerView) super.getView();
+  public BounceRecyclerView getView() {
+    return (BounceRecyclerView) super.getView();
   }
 
   /**
@@ -207,7 +222,7 @@ public class WXListComponent extends WXVContainer implements IRecyclerAdapterLis
   public void addChild(WXComponent child) {
     super.addChild(child);
     int index = mChildren.indexOf(child);
-    recyclerViewBaseAdapter.notifyItemInserted(index);
+    getView().getAdapter().notifyItemInserted(index);
     if (WXEnvironment.isApkDebugable()) {
       WXLogUtils.d(TAG, "addChild child at " + index);
     }
@@ -221,8 +236,8 @@ public class WXListComponent extends WXVContainer implements IRecyclerAdapterLis
   @Override
   public void addChild(WXComponent child, int index) {
     super.addChild(child, index);
-    int adapterPosition = index == -1 ? recyclerViewBaseAdapter.getItemCount() - 1 : index;
-    recyclerViewBaseAdapter.notifyItemInserted(adapterPosition);
+    int adapterPosition = index == -1 ? getView().getAdapter().getItemCount() - 1 : index;
+    getView().getAdapter().notifyItemInserted(adapterPosition);
     if (WXEnvironment.isApkDebugable()) {
       WXLogUtils.d(TAG, "addChild child at " + index);
     }
@@ -254,7 +269,7 @@ public class WXListComponent extends WXVContainer implements IRecyclerAdapterLis
           ("Customize components that will be used in RecyclerView must implement IWXRecyclerViewChild interface");
     }
     super.remove(child);
-    recyclerViewBaseAdapter.notifyItemRemoved(index);
+    getView().getAdapter().notifyItemRemoved(index);
     if (WXEnvironment.isApkDebugable()) {
       WXLogUtils.d(TAG, "removeChild child at " + index);
     }
@@ -262,7 +277,7 @@ public class WXListComponent extends WXVContainer implements IRecyclerAdapterLis
 
   @Override
   public void computeVisiblePointInViewCoordinate(PointF pointF) {
-    RecyclerView view = getView();
+    RecyclerView view = getView().getBounceView();
     pointF.set(view.computeHorizontalScrollOffset(), view.computeVerticalScrollOffset());
   }
 
@@ -338,7 +353,6 @@ public class WXListComponent extends WXVContainer implements IRecyclerAdapterLis
     }
     if (mChildren != null) {
       int count = childCount();
-
       for (int i = 0; i < count; i++) {
         WXComponent wxComponent = getChild(i);
         if (wxComponent != null && getItemViewType(i) == viewType) {
@@ -361,6 +375,28 @@ public class WXListComponent extends WXVContainer implements IRecyclerAdapterLis
               return new ListBaseViewHolder(getChild(i).getView());
             }
 
+          } else if (wxComponent instanceof WXRefresh) {
+            WXComponent wxCell = getChild(i);
+            wxCell.bind(wxCell.getView());
+            wxCell.flushView();
+            getView().setBounceHeaderView(new IRefreshLayout.Adapter(wxCell.getView()) {
+            });
+            //getView().getAdapter().setRefreshLayout();
+            FrameLayout view = new FrameLayout(mContext);
+            view.setBackgroundColor(Color.TRANSPARENT);
+            view.setLayoutParams(new FrameLayout.LayoutParams(1, 1));
+            return new ListBaseViewHolder(view);
+          } else if (wxComponent instanceof WXLoading) {
+            WXComponent wxCell = getChild(i);
+            wxCell.bind(wxCell.getView());
+            wxCell.flushView();
+            getView().setBounceFooterView(new IRefreshLayout.Adapter(wxCell.getView()) {
+            });
+            //getView().getAdapter().setLoadMoreLayout();
+            FrameLayout view = new FrameLayout(mContext);
+            view.setBackgroundColor(Color.TRANSPARENT);
+            view.setLayoutParams(new FrameLayout.LayoutParams(1, 1));
+            return new ListBaseViewHolder(view);
           } else if (getChild(i).getView() != null) {
             WXComponent wxCell = getChild(i);
             wxCell.bind(wxCell.getView());

@@ -202,32 +202,277 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
-package com.taobao.weex.ui.component;
+package com.taobao.weex.ui.view.listview;
 
-/**
- * basic Component types
- */
-public class WXBasicComponentType {
+import android.content.Context;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
+import android.util.AttributeSet;
+import android.view.View;
 
-  public static final String TEXT = "text";
-  public static final String IMAGE = "image";
-  public static final String IMG = "img";
-  public static final String CONTAINER = "container";
-  public static final String DIV = "div";
-  public static final String SCROLLER = "scroller";
-  public static final String SLIDER = "slider";
-  public static final String LIST = "list";
-  public static final String CELL = "cell";
-  public static final String HEADER = "header";
-  public static final String FOOTER = "footer";
-  public static final String INDICATOR = "indicator";
-  public static final String VIDEO = "video";
-  public static final String INPUT = "input";
-  public static final String SWITCH = "switch";
-  public static final String A = "a";
-  public static final String EMBED = "embed";
-  public static final String WEB = "web";
-  public static final String REFRESH = "refres";
-  public static final String LOADING = "loading";
+import com.taobao.weex.ui.view.listview.adapter.RecyclerViewBaseAdapter;
+
+public class BounceRecyclerView extends BaseBounceView<RecyclerView> {
+
+    private State mState = State.RESET;
+    private OnRefreshListener mOnRefreshListener;
+    private OnLoadMoreListener mOnLoadMoreListener;
+    private RefreshAdapterWrapper mRefreshAdapter;
+
+    private enum State {
+        PULL_TO_REFRESH_TOP,
+        RELEASE_TO_REFRESH_TOP,
+        PULL_TO_REFRESH_BOTTOM,
+        RELEASE_TO_REFRESH_BOTTOM,
+        REFRESHING,
+        LOADMORE,
+        LOADMORE_TOP,
+        RESET
+    }
+
+    public BounceRecyclerView(Context context) {
+        super(context);
+    }
+
+    public BounceRecyclerView(Context context, AttributeSet attrs) {
+        super(context, attrs);
+    }
+
+    public void setOnRefreshListener(OnRefreshListener listener) {
+        mOnRefreshListener = listener;
+    }
+
+    public void setOnLoadMoreListener(OnLoadMoreListener listener) {
+        mOnLoadMoreListener = listener;
+    }
+
+    public void setAdapter(RecyclerViewBaseAdapter adapter) {
+        mRefreshAdapter = new RefreshAdapterWrapper(getContext(), adapter);
+        getBounceView().setAdapter(mRefreshAdapter);
+    }
+
+    public RefreshAdapterWrapper getAdapter() {
+        return mRefreshAdapter;
+    }
+
+    public void refreshState() {
+        if (mOnRefreshListener != null) {
+            onRefreshComplete();
+        }
+        if (mOnLoadMoreListener != null) {
+            onLoadMoreComplete();
+        }
+    }
+
+    @Override
+    public boolean isReadyForPullFromTop() {
+        LinearLayoutManager lm = (LinearLayoutManager) getBounceView().getLayoutManager();
+        if (lm.findFirstVisibleItemPosition() == 0) {
+            final View firstVisibleChild = getBounceView().getChildAt(0);
+            if (firstVisibleChild != null) {
+                return firstVisibleChild.getTop() + getPaddingTop() >= getBounceView().getTop();
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public boolean isReadyForPullFromBottom() {
+        RecyclerView lv = getBounceView();
+        final RecyclerView.Adapter adapter = lv.getAdapter();
+        LinearLayoutManager lm = (LinearLayoutManager) getBounceView().getLayoutManager();
+        final int lastItemPosition = adapter.getItemCount() - 1;
+        final int lastVisiblePosition = lm.findLastVisibleItemPosition();
+        if (lastVisiblePosition >= lastItemPosition) {
+            final int childIndex = lastVisiblePosition - lm.findFirstVisibleItemPosition();
+            final View lastVisibleChild = lv.getChildAt(childIndex);
+            if (lastVisibleChild != null) {
+                return lastVisibleChild.getBottom() + getPaddingTop() <= lv.getBottom();
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public RecyclerView createBounceView(Context context) {
+        WXRecyclerView recyclerView = new WXRecyclerView(context);
+        recyclerView.initView(context, WXRecyclerView.TYPE_LINEAR_LAYOUT);
+        return recyclerView;
+    }
+
+    @Override
+    public IRefreshLayout createBounceHeaderView(Context context) {
+        return new RefreshLayout(context);
+    }
+
+    @Override
+    public IRefreshLayout createBounceFooterView(Context context) {
+        return new LoadMoreLayout(context);
+    }
+
+    @Override
+    protected void onTouchActionUp() {
+        super.onTouchActionUp();
+        if (!isRefreshing() && !isLoadingMore()) {
+            if (getState() == State.RELEASE_TO_REFRESH_TOP && null != mOnRefreshListener) {
+                getBounceHeaderView().setVisibility(View.INVISIBLE);
+                setState(State.REFRESHING);
+            } else if (getState() == State.RELEASE_TO_REFRESH_BOTTOM && null != mOnLoadMoreListener) {
+                getBounceFooterView().setVisibility(View.INVISIBLE);
+                setState(State.LOADMORE);
+            } else if (getState() != State.LOADMORE) {
+                setState(State.RESET);
+            }
+        }
+    }
+
+    @Override
+    protected void onPullStateChanged(int itemDimension, int scrollValue) {
+        super.onPullStateChanged(itemDimension, scrollValue);
+        if (!isRefreshing() && !isLoadingMore()) {
+            if (scrollValue < 0) {// refresh
+                if (refreshEnabled()) {
+                    setState(itemDimension >= Math.abs(scrollValue) ? State.PULL_TO_REFRESH_TOP : State.RELEASE_TO_REFRESH_TOP);
+                }
+                getBounceHeaderView().setVisibility(refreshEnabled() ? View.VISIBLE : View.INVISIBLE);
+            } else {// loadmore
+                if (loadMoreEnabled()) {
+                    setState(itemDimension >= Math.abs(scrollValue) ? State.PULL_TO_REFRESH_BOTTOM : State.RELEASE_TO_REFRESH_BOTTOM);
+                }
+                getBounceFooterView().setVisibility(loadMoreEnabled() ? View.VISIBLE : View.INVISIBLE);
+            }
+        }
+    }
+
+    private void setState(State s) {
+        mState = s;
+        switch (s) {
+            case PULL_TO_REFRESH_TOP: {
+                /*if (mRefreshLayout != null) {
+                    setRefreshLabel(mRefreshLayout.getPullLabelText(getContext()));
+                }*/
+                break;
+            }
+            case RELEASE_TO_REFRESH_TOP: {
+                /*if (mRefreshLayout != null) {
+                    setRefreshLabel(mRefreshLayout.getReleaseLabelText(getContext()));
+                }*/
+                break;
+            }
+            case REFRESHING: {
+                //if (mRefreshLayout != null) {
+                //    setRefreshLabel(mRefreshLayout.getRefreshingLabelText(getContext()));
+                    onRefreshing();
+                //}
+                break;
+            }
+            case RESET: {
+                onReset();
+                break;
+            }
+            case LOADMORE: {
+                /*setMoreViewVisible(true);
+                mOnLoadMoreListener.onLoadMore();*/
+                onLoadingMore();
+                break;
+            }
+            case LOADMORE_TOP: {
+                /*setMoreViewTopVisible(true);
+                mOnLoadMoreTopListener.onLoadMore();*/
+                break;
+            }
+        }
+    }
+
+    private void onRefreshing() {
+        //mRefreshLayout.setVisibility(View.VISIBLE);
+        //mRefreshLayout.refreshing();
+        mRefreshAdapter.refreshing();
+        getBounceHeaderView().setVisibility(View.INVISIBLE);
+        if (mOnRefreshListener != null) {
+            mOnRefreshListener.onRefresh();
+        }
+    }
+
+    private void notifyDataSetChanged(final RecyclerView recyclerView) {
+        mRefreshAdapter.notifyDataSetChanged();
+        recyclerView.post(new Runnable() {
+            @Override
+            public void run() {
+                RecyclerView.LayoutManager layoutManager = recyclerView.getLayoutManager();
+                int lastVisibleItemPosition = ((LinearLayoutManager) layoutManager).findLastVisibleItemPosition();
+                recyclerView.setAdapter(mRefreshAdapter);
+                layoutManager.scrollToPosition(lastVisibleItemPosition);
+            }
+        });
+    }
+
+    private void onLoadingMore() {
+        mRefreshAdapter.loadingMore();
+        getBounceFooterView().setVisibility(View.INVISIBLE);
+        notifyDataSetChanged(getBounceView());
+        if (mOnLoadMoreListener != null) {
+            mOnLoadMoreListener.onLoadMore();
+        }
+    }
+
+    private void onRefreshComplete() {
+        if (isRefreshing()) {
+            //setRefreshLabel(mRefreshLayout.getRefreshingSuccessLabelText(getContext()));
+            postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    getBounceHeaderView().setVisibility(View.VISIBLE);
+                    setState(State.RESET);
+                    //scrollTo(0, -mRefreshLayout.getView().getHeight());
+                    //smoothScroll(mRefreshLayout.getView().getHeight());
+                }
+            }, 500);
+        }
+    }
+
+    private void onLoadMoreComplete() {
+        if (isLoadingMore()) {
+            postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    getBounceFooterView().setVisibility(View.VISIBLE);
+                    setState(State.RESET);
+                    //scrollTo(0, -mRefreshLayout.getView().getHeight());
+                    //smoothScroll(mRefreshLayout.getView().getHeight());
+                }
+            }, 500);
+        }
+    }
+
+    private void onReset() {
+        /*if (mRefreshLayout != null) {
+            mRefreshLayout.resetRefreshing();
+            mRefreshLayout.setVisibility(View.GONE);
+        }*/
+        //setMoreViewVisible(false);
+        //setMoreViewTopVisible(false);
+        mRefreshAdapter.resetRefreshing();
+    }
+
+    private boolean refreshEnabled() {
+        return mOnRefreshListener != null;
+    }
+
+    private boolean loadMoreEnabled() {
+        return mOnLoadMoreListener != null;
+    }
+
+    private boolean isRefreshing() {
+        return getState() == State.REFRESHING;
+    }
+
+    private boolean isLoadingMore() {
+        return getState() == State.LOADMORE;
+    }
+
+    private State getState() {
+        return mState;
+    }
 
 }

@@ -204,30 +204,27 @@
  */
 package com.taobao.weex.ui.component;
 
-/**
- * basic Component types
- */
-public class WXBasicComponentType {
+import com.taobao.weex.WXSDKInstance;
+import com.taobao.weex.dom.WXDomObject;
+import com.taobao.weex.ui.view.WXFrameLayout;
 
-  public static final String TEXT = "text";
-  public static final String IMAGE = "image";
-  public static final String IMG = "img";
-  public static final String CONTAINER = "container";
-  public static final String DIV = "div";
-  public static final String SCROLLER = "scroller";
-  public static final String SLIDER = "slider";
-  public static final String LIST = "list";
-  public static final String CELL = "cell";
-  public static final String HEADER = "header";
-  public static final String FOOTER = "footer";
-  public static final String INDICATOR = "indicator";
-  public static final String VIDEO = "video";
-  public static final String INPUT = "input";
-  public static final String SWITCH = "switch";
-  public static final String A = "a";
-  public static final String EMBED = "embed";
-  public static final String WEB = "web";
-  public static final String REFRESH = "refres";
-  public static final String LOADING = "loading";
+/**
+ * div component
+ */
+public class WXRefresh extends WXVContainer implements IWXRecyclerViewChild {
+
+  public WXRefresh(WXSDKInstance instance, WXDomObject node, WXVContainer parent, String instanceId, boolean lazy) {
+    super(instance, node, parent, instanceId, lazy);
+  }
+
+  @Override
+  protected void initView() {
+    mHost = new WXFrameLayout(mContext);
+  }
+
+  @Override
+  public WXFrameLayout getView() {
+    return (WXFrameLayout) super.getView();
+  }
 
 }

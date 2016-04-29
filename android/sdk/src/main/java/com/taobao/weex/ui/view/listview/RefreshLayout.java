@@ -202,32 +202,84 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
-package com.taobao.weex.ui.component;
+package com.taobao.weex.ui.view.listview;
 
-/**
- * basic Component types
- */
-public class WXBasicComponentType {
+import android.content.Context;
+import android.view.View;
+import android.widget.TextView;
 
-  public static final String TEXT = "text";
-  public static final String IMAGE = "image";
-  public static final String IMG = "img";
-  public static final String CONTAINER = "container";
-  public static final String DIV = "div";
-  public static final String SCROLLER = "scroller";
-  public static final String SLIDER = "slider";
-  public static final String LIST = "list";
-  public static final String CELL = "cell";
-  public static final String HEADER = "header";
-  public static final String FOOTER = "footer";
-  public static final String INDICATOR = "indicator";
-  public static final String VIDEO = "video";
-  public static final String INPUT = "input";
-  public static final String SWITCH = "switch";
-  public static final String A = "a";
-  public static final String EMBED = "embed";
-  public static final String WEB = "web";
-  public static final String REFRESH = "refres";
-  public static final String LOADING = "loading";
+public class RefreshLayout implements IRefreshLayout {
 
+    private View mMainView;
+
+    public RefreshLayout(Context context) {
+        TextView tv = new TextView(context);
+        tv.setText("refreshing");
+        mMainView = tv;
+    }
+
+    @Override
+    public View getView() {
+        return mMainView;
+    }
+
+    @Override
+    public void onPull(float scale) {
+
+    }
+
+    @Override
+    public void refreshing() {
+
+    }
+
+    @Override
+    public void resetRefreshing() {
+
+    }
+
+    @Override
+    public void setVisibility(int visibility) {
+        getView().setVisibility(visibility);
+    }
+
+    @Override
+    public void setPullLabel(CharSequence pullLabel) {
+
+    }
+
+    @Override
+    public void setRefreshingLabel(CharSequence refreshingLabel) {
+
+    }
+
+    @Override
+    public void setReleaseLabel(CharSequence releaseLabel) {
+
+    }
+
+    @Override
+    public void setSuccessLabel(CharSequence releaseLabel) {
+
+    }
+
+    @Override
+    public String getRefreshingSuccessLabelText(Context context) {
+        return null;
+    }
+
+    @Override
+    public String getPullLabelText(Context context) {
+        return null;
+    }
+
+    @Override
+    public String getReleaseLabelText(Context context) {
+        return null;
+    }
+
+    @Override
+    public String getRefreshingLabelText(Context context) {
+        return null;
+    }
 }

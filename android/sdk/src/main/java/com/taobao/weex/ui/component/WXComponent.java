@@ -131,7 +131,6 @@ import android.content.Context;
 import android.graphics.PointF;
 import android.support.annotation.Nullable;
 import android.support.v4.view.ViewPager;
-import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
 import android.view.View;
 import android.view.ViewGroup;
@@ -157,6 +156,7 @@ import com.taobao.weex.ui.view.WXCircleIndicator;
 import com.taobao.weex.ui.view.gesture.WXGesture;
 import com.taobao.weex.ui.view.gesture.WXGestureObservable;
 import com.taobao.weex.ui.view.gesture.WXGestureType;
+import com.taobao.weex.ui.view.listview.BounceRecyclerView;
 import com.taobao.weex.utils.WXLogUtils;
 import com.taobao.weex.utils.WXResourceUtils;
 import com.taobao.weex.utils.WXUtils;
@@ -340,8 +340,8 @@ public abstract class WXComponent implements IWXObject, IWXActivityStateListener
       ScrollView.LayoutParams params = new ScrollView.LayoutParams(realWidth, realHeight);
       params.setMargins(realLeft, realTop, realRight, realBottom);
       mHost.setLayoutParams(params);
-    } else if (mParent.getRealView() instanceof RecyclerView) {
-
+    } else if (mParent.getRealView() instanceof BounceRecyclerView) {
+      mHost.setLayoutParams(new ViewGroup.LayoutParams(realWidth, realHeight));
       //todo Nothing
     }
 

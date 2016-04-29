@@ -211,7 +211,7 @@ import android.view.ViewGroup;
 /**
  * Adapter for recyclerView
  */
-public class RecyclerViewBaseAdapter<T extends RecyclerView.ViewHolder> extends RecyclerView.Adapter<T> {
+public class RecyclerViewBaseAdapter<T extends ListBaseViewHolder> extends RecyclerView.Adapter<T> {
 
   private String TAG = "RecyclerViewBaseAdapter";
   private IRecyclerAdapterListener iRecyclerAdapterListener;

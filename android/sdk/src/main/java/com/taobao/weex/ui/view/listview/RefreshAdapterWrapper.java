@@ -202,32 +202,131 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
-package com.taobao.weex.ui.component;
+package com.taobao.weex.ui.view.listview;
 
-/**
- * basic Component types
- */
-public class WXBasicComponentType {
+import android.content.Context;
+import android.support.v7.widget.RecyclerView;
+import android.view.ViewGroup;
 
-  public static final String TEXT = "text";
-  public static final String IMAGE = "image";
-  public static final String IMG = "img";
-  public static final String CONTAINER = "container";
-  public static final String DIV = "div";
-  public static final String SCROLLER = "scroller";
-  public static final String SLIDER = "slider";
-  public static final String LIST = "list";
-  public static final String CELL = "cell";
-  public static final String HEADER = "header";
-  public static final String FOOTER = "footer";
-  public static final String INDICATOR = "indicator";
-  public static final String VIDEO = "video";
-  public static final String INPUT = "input";
-  public static final String SWITCH = "switch";
-  public static final String A = "a";
-  public static final String EMBED = "embed";
-  public static final String WEB = "web";
-  public static final String REFRESH = "refres";
-  public static final String LOADING = "loading";
+import com.taobao.weex.ui.view.listview.adapter.ListBaseViewHolder;
+import com.taobao.weex.ui.view.listview.adapter.RecyclerViewBaseAdapter;
+
+public class RefreshAdapterWrapper extends RecyclerView.Adapter<ListBaseViewHolder> {
+
+    private static final int ITEM_TYPE_REFRESH = 0xffffff;
+    private static final int ITEM_TYPE_LOADMORE = 0xffffff + 1;
+
+
+    private Status mStatus = Status.NORMAL;
+    private RecyclerViewBaseAdapter mInnerRecyclerViewAdapter;
+    private IRefreshLayout mRefreshLayout;
+    private IRefreshLayout mLoadMoreLayout;
+
+    private enum Status {
+        NORMAL,
+        REFRESH,
+        LOADMORE
+    }
+
+    public RefreshAdapterWrapper(Context context, RecyclerViewBaseAdapter adapter) {
+        mInnerRecyclerViewAdapter = adapter;
+        init(context);
+    }
+
+    public void refreshing() {
+        mStatus = Status.REFRESH;
+        mRefreshLayout.refreshing();
+        notifyDataSetChanged();
+    }
+
+    public void resetRefreshing() {
+        mStatus = Status.NORMAL;
+        mRefreshLayout.resetRefreshing();
+        mLoadMoreLayout.resetRefreshing();
+        notifyDataSetChanged();
+    }
+
+    public void loadingMore() {
+        mStatus = Status.LOADMORE;
+        mLoadMoreLayout.refreshing();
+        //notifyDataSetChanged();
+    }
+
+    public void setRefreshLayout(IRefreshLayout refreshLayout) {
+        mRefreshLayout = refreshLayout;
+    }
+
+    public void setLoadMoreLayout(IRefreshLayout loadMoreLayout) {
+        mLoadMoreLayout = loadMoreLayout;
+    }
+
+    public boolean isRefreshing() {
+        return mStatus == Status.REFRESH;
+    }
+
+    public boolean isLoadingMore() {
+        return mStatus == Status.LOADMORE;
+    }
+
+    @Override
+    public ListBaseViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+        switch (mStatus) {
+            case REFRESH:
+                if (viewType == ITEM_TYPE_REFRESH) {
+                    return new ListBaseViewHolder(mRefreshLayout.getView());
+                }
+                break;
+            case LOADMORE:
+                if (viewType == ITEM_TYPE_LOADMORE) {
+                    return new ListBaseViewHolder(mLoadMoreLayout.getView());
+                }
+                break;
+        }
+        return mInnerRecyclerViewAdapter.onCreateViewHolder(parent, viewType);
+    }
+
+    @Override
+    public void onBindViewHolder(ListBaseViewHolder holder, int position) {
+        if (position == 0) {
+            switch (mStatus) {
+                case REFRESH:
+                    //holder.setData();
+                    return;
+            }
+        } else if (position == getItemCount() - 1) {
+            switch (mStatus) {
+                case LOADMORE:
+                    return;
+            }
+        }
+        mInnerRecyclerViewAdapter.onBindViewHolder(holder, position);
+    }
+
+    @Override
+    public int getItemCount() {
+        int innerItemCount = mInnerRecyclerViewAdapter.getItemCount();
+        return mStatus == Status.NORMAL || innerItemCount == 0 ? innerItemCount : innerItemCount + 1;
+    }
+
+    @Override
+    public int getItemViewType(int position) {
+        if (position == 0) {
+            switch (mStatus) {
+                case REFRESH:
+                    return ITEM_TYPE_REFRESH;
+            }
+        } else if (position == getItemCount() - 1) {
+            switch (mStatus) {
+                case LOADMORE:
+                    return ITEM_TYPE_LOADMORE;
+            }
+        }
+        return mInnerRecyclerViewAdapter.getItemViewType(position);
+    }
+
+    private void init(Context context) {
+        mRefreshLayout = new RefreshLayout(context);
+        mLoadMoreLayout = new LoadMoreLayout(context);
+    }
 
 }
