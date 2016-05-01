@@ -302,12 +302,12 @@ public class BounceRecyclerView extends BaseBounceView<RecyclerView> {
 
     @Override
     public IRefreshLayout createBounceHeaderView(Context context) {
-        return new RefreshLayout(context);
+        return new IRefreshLayout.Adapter(new View(context));
     }
 
     @Override
     public IRefreshLayout createBounceFooterView(Context context) {
-        return new LoadMoreLayout(context);
+        return new IRefreshLayout.Adapter(new View(context));
     }
 
     @Override

@@ -202,84 +202,82 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
-package com.taobao.weex.ui.view.listview;
+package com.taobao.weex.ui.view;
 
 import android.content.Context;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.RectF;
+import android.util.AttributeSet;
 import android.view.View;
-import android.widget.TextView;
 
-public class RefreshLayout implements IRefreshLayout {
+import com.taobao.weex.utils.WXLogUtils;
+import com.taobao.weex.utils.WXViewUtils;
 
-    private View mMainView;
+public class WXLoadingIndicatorView extends View {
 
-    public RefreshLayout(Context context) {
-        TextView tv = new TextView(context);
-        tv.setText("refreshing");
-        mMainView = tv;
+    private int maxProgress = 100;
+    private int progress = 0;
+
+    private RectF oval;
+    private Paint paint;
+
+    public WXLoadingIndicatorView(Context context) {
+        this(context, null);
+    }
+
+    public WXLoadingIndicatorView(Context context, AttributeSet attrs) {
+        this(context, attrs, 0);
+    }
+
+    public WXLoadingIndicatorView(Context context, AttributeSet attrs, int defStyleAttr) {
+        super(context, attrs, defStyleAttr);
+        oval = new RectF();
+        paint = new Paint();
     }
 
     @Override
-    public View getView() {
-        return mMainView;
+    protected void onDraw(Canvas canvas) {
+        super.onDraw(canvas);
+        int width = this.getWidth();
+        int height = this.getHeight();
+
+        if (width != height) {
+            int min = Math.min(width, height);
+            width = min;
+            height = min;
+        }
+
+        paint.setAntiAlias(true);
+        paint.setColor(Color.GRAY);
+        canvas.drawColor(Color.TRANSPARENT);
+        int progressStrokeWidth = WXViewUtils.dip2px(4);
+        paint.setStrokeWidth(progressStrokeWidth);
+        paint.setStyle(Paint.Style.STROKE);
+
+        oval.left = progressStrokeWidth / 2; // 左上角x
+        oval.top = progressStrokeWidth / 2; // 左上角y
+        oval.right = width - progressStrokeWidth / 2; // 左下角x
+        oval.bottom = height - progressStrokeWidth / 2; // 右下角y
+
+        canvas.drawArc(oval, -90, ((float) progress / maxProgress) * 360, false, paint); // 绘制进度圆弧
+
+        WXLogUtils.v("tag", "progress "+progress);
     }
 
-    @Override
-    public void onPull(float scale) {
-
+    public int getMaxProgress() {
+        return maxProgress;
     }
 
-    @Override
-    public void refreshing() {
-
+    public void setMaxProgress(int maxProgress) {
+        this.maxProgress = maxProgress;
     }
 
-    @Override
-    public void resetRefreshing() {
-
+    public void setProgress(int progress) {
+        this.progress = progress;
+        this.invalidate();
     }
 
-    @Override
-    public void setVisibility(int visibility) {
-        getView().setVisibility(visibility);
-    }
-
-    @Override
-    public void setPullLabel(CharSequence pullLabel) {
-
-    }
-
-    @Override
-    public void setRefreshingLabel(CharSequence refreshingLabel) {
-
-    }
-
-    @Override
-    public void setReleaseLabel(CharSequence releaseLabel) {
-
-    }
-
-    @Override
-    public void setSuccessLabel(CharSequence releaseLabel) {
-
-    }
-
-    @Override
-    public String getRefreshingSuccessLabelText(Context context) {
-        return null;
-    }
-
-    @Override
-    public String getPullLabelText(Context context) {
-        return null;
-    }
-
-    @Override
-    public String getReleaseLabelText(Context context) {
-        return null;
-    }
-
-    @Override
-    public String getRefreshingLabelText(Context context) {
-        return null;
-    }
 }
+

@@ -202,84 +202,50 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
-package com.taobao.weex.ui.view.listview;
+package com.taobao.weex.ui.component;
 
-import android.content.Context;
-import android.view.View;
-import android.widget.TextView;
+import android.view.Gravity;
+import android.widget.FrameLayout;
 
-public class LoadMoreLayout implements IRefreshLayout {
+import com.taobao.weex.WXSDKInstance;
+import com.taobao.weex.dom.WXDomObject;
+import com.taobao.weex.ui.view.WXLoadingIndicatorView;
+import com.taobao.weex.utils.WXViewUtils;
 
-    private View mMainView;
+public class WXLoadingIndicator extends WXComponent {
 
-    public LoadMoreLayout(Context context) {
-        TextView tv = new TextView(context);
-        tv.setText("loading more");
-        mMainView = tv;
+    private WXLoadingIndicatorView mIndicatorView;
+
+    public WXLoadingIndicator(WXSDKInstance instance, WXDomObject dom, WXVContainer parent, String instanceId, boolean isLazy) {
+        super(instance, dom, parent, instanceId, isLazy);
     }
 
     @Override
-    public View getView() {
-        return mMainView;
+    protected void initView() {
+        FrameLayout root = new FrameLayout(mContext);
+        WXLoadingIndicatorView pb = new WXLoadingIndicatorView(mContext);
+        mIndicatorView = pb;
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
+                WXViewUtils.dip2px(60),
+                WXViewUtils.dip2px(60)
+        );
+        lp.gravity = Gravity.CENTER_HORIZONTAL;
+        root.addView(pb, lp);
+        mHost = root;
     }
 
-    @Override
-    public void onPull(float scale) {
-
+    public void onPullLoadingIndicator(int progress) {
+        if (mIndicatorView != null) {
+            FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) mIndicatorView.getLayoutParams();
+            if (lp != null) {
+                if (getView().getHeight() != lp.height) {
+                    lp.width = getView().getHeight();
+                    lp.height = getView().getHeight();
+                    mIndicatorView.setLayoutParams(lp);
+                }
+            }
+            mIndicatorView.setProgress(progress);
+        }
     }
 
-    @Override
-    public void refreshing() {
-
-    }
-
-    @Override
-    public void resetRefreshing() {
-
-    }
-
-    @Override
-    public void setVisibility(int visibility) {
-        getView().setVisibility(visibility);
-    }
-
-    @Override
-    public void setPullLabel(CharSequence pullLabel) {
-
-    }
-
-    @Override
-    public void setRefreshingLabel(CharSequence refreshingLabel) {
-
-    }
-
-    @Override
-    public void setReleaseLabel(CharSequence releaseLabel) {
-
-    }
-
-    @Override
-    public void setSuccessLabel(CharSequence releaseLabel) {
-
-    }
-
-    @Override
-    public String getRefreshingSuccessLabelText(Context context) {
-        return null;
-    }
-
-    @Override
-    public String getPullLabelText(Context context) {
-        return null;
-    }
-
-    @Override
-    public String getReleaseLabelText(Context context) {
-        return null;
-    }
-
-    @Override
-    public String getRefreshingLabelText(Context context) {
-        return null;
-    }
 }

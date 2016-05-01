@@ -205,26 +205,24 @@
 package com.taobao.weex.ui.component;
 
 import com.taobao.weex.WXSDKInstance;
+import com.taobao.weex.WXSDKManager;
 import com.taobao.weex.dom.WXDomObject;
-import com.taobao.weex.ui.view.WXFrameLayout;
+import com.taobao.weex.ui.view.listview.OnLoadMoreListener;
 
 /**
  * div component
  */
-public class WXLoading extends WXVContainer implements IWXRecyclerViewChild {
+public class WXLoading extends WXBaseRefresh implements OnLoadMoreListener {
 
   public WXLoading(WXSDKInstance instance, WXDomObject node, WXVContainer parent, String instanceId, boolean lazy) {
     super(instance, node, parent, instanceId, lazy);
   }
 
   @Override
-  protected void initView() {
-    mHost = new WXFrameLayout(mContext);
-  }
-
-  @Override
-  public WXFrameLayout getView() {
-    return (WXFrameLayout) super.getView();
+  public void onLoadMore() {
+    if (mDomObj.event != null && mDomObj.event.contains(WXEventType.RECYCLERVIEW_ONLOADING)) {
+      WXSDKManager.getInstance().fireEvent(mInstanceId, getRef(), WXEventType.RECYCLERVIEW_ONLOADING);
+    }
   }
 
 }

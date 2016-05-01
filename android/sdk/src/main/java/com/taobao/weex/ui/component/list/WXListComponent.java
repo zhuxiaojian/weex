@@ -132,8 +132,6 @@ import com.taobao.weex.ui.component.WXRefresh;
 import com.taobao.weex.ui.component.WXVContainer;
 import com.taobao.weex.ui.view.listview.BounceRecyclerView;
 import com.taobao.weex.ui.view.listview.IRefreshLayout;
-import com.taobao.weex.ui.view.listview.OnLoadMoreListener;
-import com.taobao.weex.ui.view.listview.OnRefreshListener;
 import com.taobao.weex.ui.view.listview.adapter.IOnLoadMoreListener;
 import com.taobao.weex.ui.view.listview.adapter.IRecyclerAdapterListener;
 import com.taobao.weex.ui.view.listview.adapter.ListBaseViewHolder;
@@ -153,12 +151,15 @@ import java.util.List;
  * {@link #onViewRecycled(ListBaseViewHolder)}. In other situations, the association may not valid
  * or not even exist.
  */
-public class WXListComponent extends WXVContainer implements IRecyclerAdapterListener<ListBaseViewHolder>, IOnLoadMoreListener {
+public class WXListComponent extends WXVContainer implements
+        IRecyclerAdapterListener<ListBaseViewHolder>, IOnLoadMoreListener{
 
   private String TAG = "WXListComponent";
   private HashMap<String, Integer> typeList = new HashMap<>();
   private ArrayList<Integer> indoreCells;
   private int listCellCount = 0;
+  private WXRefresh mRefresh;
+  private WXLoading mLoading;
 
   private SparseArray<WXComponent> mAppearComponents=new SparseArray<>();
 
@@ -189,18 +190,6 @@ public class WXListComponent extends WXVContainer implements IRecyclerAdapterLis
     mHost = new BounceRecyclerView(mContext);
     RecyclerViewBaseAdapter recyclerViewBaseAdapter = new RecyclerViewBaseAdapter<>(this);
     getView().setAdapter(recyclerViewBaseAdapter);
-    getView().setOnRefreshListener(new OnRefreshListener() {
-      @Override
-      public void onRefresh() {
-        getView().refreshState();
-      }
-    });
-    getView().setOnLoadMoreListener(new OnLoadMoreListener() {
-      @Override
-      public void onLoadMore() {
-        getView().refreshState();
-      }
-    });
     getView().getBounceView().clearOnScrollListeners();
     getView().getBounceView().addOnScrollListener(new WXRecyclerViewOnScrollListener(this));
   }
@@ -223,6 +212,7 @@ public class WXListComponent extends WXVContainer implements IRecyclerAdapterLis
     super.addChild(child);
     int index = mChildren.indexOf(child);
     getView().getAdapter().notifyItemInserted(index);
+    checkRefreshOrLoading(child);
     if (WXEnvironment.isApkDebugable()) {
       WXLogUtils.d(TAG, "addChild child at " + index);
     }
@@ -238,6 +228,7 @@ public class WXListComponent extends WXVContainer implements IRecyclerAdapterLis
     super.addChild(child, index);
     int adapterPosition = index == -1 ? getView().getAdapter().getItemCount() - 1 : index;
     getView().getAdapter().notifyItemInserted(adapterPosition);
+    checkRefreshOrLoading(child);
     if (WXEnvironment.isApkDebugable()) {
       WXLogUtils.d(TAG, "addChild child at " + index);
     }
@@ -380,8 +371,12 @@ public class WXListComponent extends WXVContainer implements IRecyclerAdapterLis
             wxCell.bind(wxCell.getView());
             wxCell.flushView();
             getView().setBounceHeaderView(new IRefreshLayout.Adapter(wxCell.getView()) {
+              @Override
+              public void onPull(float scale) {
+                super.onPull(scale);
+                mRefresh.onPullLoadingIndicator((int) scale);
+              }
             });
-            //getView().getAdapter().setRefreshLayout();
             FrameLayout view = new FrameLayout(mContext);
             view.setBackgroundColor(Color.TRANSPARENT);
             view.setLayoutParams(new FrameLayout.LayoutParams(1, 1));
@@ -391,8 +386,12 @@ public class WXListComponent extends WXVContainer implements IRecyclerAdapterLis
             wxCell.bind(wxCell.getView());
             wxCell.flushView();
             getView().setBounceFooterView(new IRefreshLayout.Adapter(wxCell.getView()) {
+              @Override
+              public void onPull(float scale) {
+                super.onPull(scale);
+                mLoading.onPullLoadingIndicator((int) scale);
+              }
             });
-            //getView().getAdapter().setLoadMoreLayout();
             FrameLayout view = new FrameLayout(mContext);
             view.setBackgroundColor(Color.TRANSPARENT);
             view.setLayoutParams(new FrameLayout.LayoutParams(1, 1));
@@ -521,4 +520,16 @@ public class WXListComponent extends WXVContainer implements IRecyclerAdapterLis
   public void unbindAppearComponents(WXComponent component){
     mAppearComponents.remove(mAppearComponents.indexOfValue(component));
   }
+
+  private void checkRefreshOrLoading(WXComponent child) {
+    if (child instanceof WXRefresh) {
+      getView().setOnRefreshListener((WXRefresh)child);
+      mRefresh = (WXRefresh)child;
+    }
+    if (child instanceof WXLoading) {
+      getView().setOnLoadMoreListener((WXLoading)child);
+      mLoading = (WXLoading)child;
+    }
+  }
+
 }
