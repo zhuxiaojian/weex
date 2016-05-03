@@ -187,6 +187,7 @@ public class WXListComponent extends WXVContainer implements
   @Override
   protected void initView() {
     mHost = new BounceRecyclerView(mContext);
+    mHost.setOverScrollMode(View.OVER_SCROLL_NEVER);
     RecyclerViewBaseAdapter recyclerViewBaseAdapter = new RecyclerViewBaseAdapter<>(this);
     getView().setAdapter(recyclerViewBaseAdapter);
     getView().getBounceView().clearOnScrollListeners();
