@@ -122,7 +122,6 @@ import android.widget.FrameLayout;
 import com.taobao.weex.WXEnvironment;
 import com.taobao.weex.WXSDKInstance;
 import com.taobao.weex.WXSDKManager;
-import com.taobao.weex.common.WXException;
 import com.taobao.weex.common.WXRuntimeException;
 import com.taobao.weex.dom.WXDomObject;
 import com.taobao.weex.ui.component.WXComponent;
@@ -253,12 +252,7 @@ public class WXListComponent extends WXVContainer implements
   @Override
   public void remove(WXComponent child) {
     int index = mChildren.indexOf(child);
-    try {
-      child.detachViewAndClearPreInfo();
-    } catch (WXException e) {
-      throw new WXRuntimeException
-          ("Customize components that will be used in RecyclerView must implement IWXRecyclerViewChild interface");
-    }
+    child.detachViewAndClearPreInfo();
     super.remove(child);
     getView().getAdapter().notifyItemRemoved(index);
     if (WXEnvironment.isApkDebugable()) {
@@ -282,12 +276,7 @@ public class WXListComponent extends WXVContainer implements
   public void onViewRecycled(ListBaseViewHolder holder) {
     for (WXComponent child : mChildren) {
       if (child.getRealView() == holder.getView()) {
-        try {
-          child.detachViewAndClearPreInfo();
-        } catch (WXException e) {
-          throw new WXRuntimeException
-              ("Customize components that will be used in RecyclerView must implement IWXRecyclerViewChild interface");
-        }
+        child.detachViewAndClearPreInfo();
       }
     }
   }
@@ -311,12 +300,7 @@ public class WXListComponent extends WXVContainer implements
 
       if (getChild(position) instanceof WXCell) {
         WXCell wxCell = (WXCell) getChild(position);
-        try {
-          wxCell.detachViewAndClearPreInfo();
-        } catch (WXException e) {
-          throw new WXRuntimeException
-              ("Customize components that will be used in RecyclerView must implement IWXRecyclerViewChild interface");
-        }
+        wxCell.detachViewAndClearPreInfo();
         wxCell.lazy(false);
         wxCell.bind(holder.getView());
         wxCell.flushView();
@@ -352,16 +336,11 @@ public class WXListComponent extends WXVContainer implements
               //Shut down lazy load and force creating view.
               wxComponent.lazy(false);
               wxComponent.createView(this, -1);
-              try {
-                View view = wxComponent.detachViewAndClearPreInfo();
-                if (WXEnvironment.isApkDebugable()) {
-                  WXLogUtils.d(TAG, "OnCreateViewHolder viewType: " + viewType);
-                }
-                return new ListBaseViewHolder(view);
-              } catch (WXException e) {
-                throw new WXRuntimeException
-                    ("Customize components that will be used in RecyclerView must implement IWXRecyclerViewChild interface");
+              View view = wxComponent.detachViewAndClearPreInfo();
+              if (WXEnvironment.isApkDebugable()) {
+                WXLogUtils.d(TAG, "OnCreateViewHolder viewType: " + viewType);
               }
+              return new ListBaseViewHolder(view);
             } else {
               return new ListBaseViewHolder(getChild(i).getView());
             }

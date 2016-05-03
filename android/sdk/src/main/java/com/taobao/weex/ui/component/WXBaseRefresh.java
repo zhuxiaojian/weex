@@ -215,7 +215,7 @@ import com.taobao.weex.ui.view.listview.BounceRecyclerView;
 /**
  * div component
  */
-public class WXBaseRefresh extends WXVContainer implements IWXRecyclerViewChild {
+public class WXBaseRefresh extends WXVContainer {
 
   private WXLoadingIndicator mLoadingIndicator;
 

@@ -146,7 +146,6 @@ import com.taobao.weex.WXSDKManager;
 import com.taobao.weex.bridge.WXBridgeManager;
 import com.taobao.weex.common.IWXObject;
 import com.taobao.weex.common.WXDomPropConstant;
-import com.taobao.weex.common.WXException;
 import com.taobao.weex.common.WXRuntimeException;
 import com.taobao.weex.dom.WXDomObject;
 import com.taobao.weex.dom.flex.Spacing;
@@ -892,10 +891,7 @@ public abstract class WXComponent implements IWXObject, IWXActivityStateListener
    *
    * @return the original View
    */
-  public View detachViewAndClearPreInfo() throws WXException {
-    //    if (!(this instanceof IWXRecyclerViewChild)) {
-    //      throw new WXException("Class " + getClass().getName() + " doesn't implement IWXRecyclerViewChild");
-    //    } else {
+  public View detachViewAndClearPreInfo() {
     View original = mHost;
     if (mBorder != null) {
       mBorder.detachView();
@@ -906,7 +902,6 @@ public abstract class WXComponent implements IWXObject, IWXActivityStateListener
     mPreRealTop = 0;
     mHost = null;
     return original;
-    //    }
   }
 
   /**
