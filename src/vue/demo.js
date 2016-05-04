@@ -5,10 +5,45 @@ Vue.component('foo', {
   },
   render: function () {
     with (this) { return __h__('div', undefined, [(list)&&__renderList__((list), function(k, v,$index){return __h__('div', {class:[a, 'a'],style:{m: '1', n: a},attrs:{"n":a},staticAttrs:{"m":"a","style":"l: 2"}}, [("\n aaa"+__toString__(a)+"bbb"+__toString__(k)+"-"+__toString__(v)+"\n "),_staticTrees[0]], '')})], '')}
+    // with (this) {
+    //   return __r__(
+    //     __s__('div', {
+    //       staticAttrs: {a: 'b'}
+    //     }),
+    //     [
+    //       __r__(
+    //         __s__('text', {
+    //           staticAttrs: {value: 'child text content'}
+    //         })
+    //       ),
+    //     (list) && __renderList__((list), function(k, v, $index) {
+    //       return __r__(
+    //         __s__('div', {
+    //           class:[a, 'a'],
+    //           style:{m: '1', n: a},
+    //           attrs:{"n":a},
+    //           staticAttrs:{"m":"a","style":"l: 2"}
+    //         }),
+    //         [
+    //           __t__("\n aaa"+__toString__(a)+"bbb"+__toString__(k)+"-"+__toString__(v)+"\n "),
+    //           __m__(0)
+    //         ]
+    //       )
+    //     })]
+    //   )
+    // }
   },
   staticRenderFns: [
     function () {
       with(this){return __h__('text', {staticAttrs: {value: 'Hello World'}}, [], '')}
+      // with (this) {
+      //   return __r__(
+      //     __s__('text', {
+      //       staticAttrs: {value: 'Hello World'}
+      //     }),
+      //     []
+      //   )
+      // }
     }
   ]
 })
@@ -34,6 +69,12 @@ return new Vue({
       //   __s__('div', {}),
       //   [
       //     __r__(
+      //       __s__('foo', {
+      //         attrs:{"a":x,"b":y}
+      //       }),
+      //       []
+      //     ),
+      //     __r__(
       //       __s__('text', {
       //         on:{"click":foo},
       //         staticClass:"a b",
@@ -48,7 +89,7 @@ return new Vue({
       return __h__(
         'div', {},
         [
-          // __h__('foo', {attrs:{"a":x,"b":y}}, undefined, ''),
+          __h__('foo', {attrs:{"a":x,"b":y}}, undefined, ''),
           // __h__(z, {}, undefined),
           __h__('text', {
             on:{"click":foo},
