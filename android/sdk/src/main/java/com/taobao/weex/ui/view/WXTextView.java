@@ -216,7 +216,7 @@ import com.taobao.weex.ui.view.gesture.WXGestureObservable;
 /**
  * TextView wrapper
  */
-public class WXTextView extends TextView implements WXGestureObservable {
+public class WXTextView extends TextView implements WXGestureObservable,IWXTextView {
 
   private WXGesture wxGesture;
 
