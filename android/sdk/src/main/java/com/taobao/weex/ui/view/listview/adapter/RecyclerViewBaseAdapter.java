@@ -248,8 +248,7 @@ public class RecyclerViewBaseAdapter<T extends ListBaseViewHolder> extends Recyc
 
   @Override
   public long getItemId(int position) {
-    //        WXLogUtils.d(TAG, "getItemId position " + position);
-    return super.getItemId(position);
+    return iRecyclerAdapterListener.getItemId(position);
   }
 
   @Override
@@ -258,7 +257,6 @@ public class RecyclerViewBaseAdapter<T extends ListBaseViewHolder> extends Recyc
       return iRecyclerAdapterListener.getItemCount();
     }
     return 0;
-
   }
 
   @Override

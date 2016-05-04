@@ -260,7 +260,7 @@ public class RefreshAdapterWrapper extends RecyclerView.Adapter<ListBaseViewHold
         if (mLoadMoreLayout != null) {
             mLoadMoreLayout.refreshing();
         }
-        //notifyDataSetChanged();
+        notifyDataSetChanged();
     }
 
     /*public void setRefreshLayout(IRefreshLayout refreshLayout) {
@@ -332,6 +332,11 @@ public class RefreshAdapterWrapper extends RecyclerView.Adapter<ListBaseViewHold
             }
         }
         return mInnerRecyclerViewAdapter.getItemViewType(position);
+    }
+
+    @Override
+    public long getItemId(int position) {
+        return mInnerRecyclerViewAdapter.getItemId(position);
     }
 
     private void init(Context context) {
