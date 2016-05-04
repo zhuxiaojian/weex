@@ -205,7 +205,6 @@
 package com.taobao.weex.dom;
 
 import android.graphics.Typeface;
-import android.os.Build;
 import android.text.BoringLayout;
 import android.text.Layout;
 import android.text.Spannable;
@@ -213,9 +212,7 @@ import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.StaticLayout;
 import android.text.TextPaint;
-import android.text.TextUtils;
 import android.text.style.AbsoluteSizeSpan;
-import android.text.style.BackgroundColorSpan;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.StrikethroughSpan;
 import android.text.style.UnderlineSpan;
@@ -229,7 +226,6 @@ import com.taobao.weex.ui.component.WXText;
 import com.taobao.weex.ui.component.WXTextDecoration;
 import com.taobao.weex.utils.WXLogUtils;
 import com.taobao.weex.utils.WXResourceUtils;
-import com.taobao.weex.utils.WXViewUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -242,10 +238,6 @@ import java.util.Map;
 public class WXTextDomObject extends WXDomObject {
 
   public static final int UNSET = -1;
-  private final static String XIAO_MI = "xiaomi";
-  private final static int XIAOMI_ABOVE_750_WIDTH_DELTA = 14;
-  private final static int XIAOMI_BELOW_750_WIDTH_DELTA = 8;
-  private final static int XIAOMI_HEIGHT_THRESHOLD = 6;
   private static final TextPaint sTextPaintInstance = new TextPaint();
   /**
    * Object for calculating text's width and height. This class is an anonymous class of
@@ -261,34 +253,12 @@ public class WXTextDomObject extends WXDomObject {
       if (text == null) {
         return;
       }
-      BoringLayout.Metrics boring = BoringLayout
-          .isBoring(text, textPaint);
-      float desiredWidth = boring == null ? Layout.getDesiredWidth(text,
-                                                                   textPaint) : Float.NaN;
+
       if(CSSConstants.isUndefined(width)){
         width=node.cssstyle.maxWidth;
       }
-      if (boring == null
-          && (CSSConstants.isUndefined(width) || (!CSSConstants
-          .isUndefined(desiredWidth) && desiredWidth <= width))) {
-        // Is used when the width is not known and the text is not
-        // boring, ie. if it contains
-        // unicode characters.
-        layout = new StaticLayout(text, textPaint,
-                                  (int) Math.ceil(desiredWidth),
-                                  Layout.Alignment.ALIGN_NORMAL, 1, 0, true);
-      } else if (boring != null
-                 && (CSSConstants.isUndefined(width) || boring.width <= width)) {
-        // Is used for single-line, boring text when the width is either
-        // unknown or bigger
-        // than the width of the text.
-        layout = BoringLayout.make(text, textPaint, boring.width,
-                                   Layout.Alignment.ALIGN_NORMAL, 1, 0, boring, true);
-      } else {
-        // Is used for multiline, boring text and the width is known.
-        layout = new StaticLayout(text, textPaint, (int) width,
-                                  Layout.Alignment.ALIGN_NORMAL, 1, 0, true);
-      }
+
+      layout = createLayoutFromSpan(width, textPaint, text);
 
       measureOutput.height = layout.getHeight();
       measureOutput.width = layout.getWidth();
@@ -297,70 +267,53 @@ public class WXTextDomObject extends WXDomObject {
         measureOutput.height = layout
             .getLineBottom(textDomObject.mNumberOfLines - 1);
       }
-      if (textDomObject.mLineHeight != UNSET) {
-        int lines = textDomObject.mNumberOfLines != UNSET ? Math.min(
-            textDomObject.mNumberOfLines, layout.getLineCount())
-                                                          : layout.getLineCount();
-        float lineHeight = textDomObject.mLineHeight;
-        measureOutput.height = lineHeight * lines;
-      }
       measureOutput.height = measureOutput.height + layout.getTopPadding() - layout
           .getBottomPadding();
-
-      processXiaoMiModel(measureOutput, width,
-                         layout.getLineCount() == 0 ? 0 : measureOutput.height / layout
-                             .getLineCount(), layout.getLineCount());
-    }
-
-    private void processXiaoMiModel(MeasureOutput measureOutput, float outerWidth,
-                                    float lineHeight, float lineCount) {
-      String manufacturer = Build.MANUFACTURER.toLowerCase();
-      if (TextUtils.equals(XIAO_MI, manufacturer)) {
-        processXiaoMiHeight(lineHeight, lineCount, measureOutput);
-        if (WXViewUtils.getScreenWidth() < WXEnvironment.sDeafultWidth) {
-          processXiaoMiWidth(measureOutput, outerWidth, XIAOMI_BELOW_750_WIDTH_DELTA);
-        } else {
-          processXiaoMiWidth(measureOutput, outerWidth, XIAOMI_ABOVE_750_WIDTH_DELTA);
-        }
-      }
-    }
-
-    private void processXiaoMiHeight(float lineHeight, float lineCount, MeasureOutput measureOutput) {
-      if (lineHeight != 0 && lineCount != 0) {
-        if (lineCount < XIAOMI_HEIGHT_THRESHOLD) {
-          measureOutput.height += (lineCount / XIAOMI_HEIGHT_THRESHOLD) * lineHeight;
-        } else {
-          measureOutput.height += lineHeight;
-        }
-      }
-    }
-
-    private void processXiaoMiWidth(MeasureOutput measureOutput, float outerWidth, int
-        widthDelta) {
-      float width_pixel = measureOutput.width + widthDelta;
-      if (Float.isNaN(outerWidth)) {
-        measureOutput.width = width_pixel;
-      } else if (outerWidth > width_pixel) {
-        measureOutput.width = width_pixel;
-      } else {
-        measureOutput.width = outerWidth;
-      }
+      textDomObject.layout=layout;
     }
 
   };
+
+  public static Layout createLayoutFromSpan(float width, TextPaint textPaint, Spanned text) {
+    Layout layout;BoringLayout.Metrics boring = BoringLayout
+        .isBoring(text, textPaint);
+    float desiredWidth = boring == null ? Layout.getDesiredWidth(text,
+                                                                 textPaint) : Float.NaN;
+
+    if (boring == null
+        && (CSSConstants.isUndefined(width) || (!CSSConstants
+        .isUndefined(desiredWidth) && desiredWidth <= width))) {
+      // Is used when the width is not known and the text is not
+      // boring, ie. if it contains
+      // unicode characters.
+      layout = new StaticLayout(text, textPaint,
+                                (int) Math.ceil(desiredWidth),
+                                Layout.Alignment.ALIGN_NORMAL, 1, 0, false);
+    } else if (boring != null
+               && (CSSConstants.isUndefined(width) || boring.width <= width)) {
+      // Is used for single-line, boring text when the width is either
+      // unknown or bigger
+      // than the width of the text.
+      layout = BoringLayout.make(text, textPaint, boring.width,
+                                 Layout.Alignment.ALIGN_NORMAL, 1, 0, boring, false);
+    } else {
+      // Is used for multiline, boring text and the width is known.
+      layout = new StaticLayout(text, textPaint, (int) width,
+                                Layout.Alignment.ALIGN_NORMAL, 1, 0, false);
+    }
+    return layout;
+  }
 
   static {
     sTextPaintInstance.setFlags(TextPaint.ANTI_ALIAS_FLAG);
   }
 
+  public Layout layout;
   public Spanned mPreparedSpannedText;
   protected int mNumberOfLines = UNSET;
   protected int mFontSize = UNSET;
-  private int mLineHeight = UNSET;
   private boolean mIsColorSet = false;
   private int mColor;
-  private boolean mIsBackgroundColorSet = false;
-  private int mBackgroundColor;
   /**
    * mFontStyle can be {@link Typeface#NORMAL} or {@link Typeface#ITALIC}.
    * mFontWeight can be {@link Typeface#NORMAL} or {@link Typeface#BOLD}.
@@ -427,6 +380,7 @@ public class WXTextDomObject extends WXDomObject {
       dom.style = style;
       dom.attr = attr;
       dom.event = event == null ? null : event.clone();
+      dom.layout=layout;
       if (this.csslayout != null) {
         dom.csslayout.copy(this.csslayout);
       }
@@ -513,10 +467,6 @@ public class WXTextDomObject extends WXDomObject {
       if (textCSSNode.mIsColorSet) {
         ops.add(new SetSpanOperation(start, end,
                                      new ForegroundColorSpan(textCSSNode.mColor)));
-      }
-      if (textCSSNode.mIsBackgroundColorSet) {
-        ops.add(new SetSpanOperation(start, end,
-                                     new BackgroundColorSpan(textCSSNode.mBackgroundColor)));
       }
       if (textCSSNode.mFontSize != UNSET) {
         ops.add(new SetSpanOperation(start, end, new AbsoluteSizeSpan(

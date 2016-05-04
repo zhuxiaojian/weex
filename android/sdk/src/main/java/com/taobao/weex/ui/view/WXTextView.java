@@ -205,6 +205,8 @@
 package com.taobao.weex.ui.view;
 
 import android.content.Context;
+import android.graphics.Canvas;
+import android.text.Layout;
 import android.view.MotionEvent;
 import android.widget.TextView;
 
@@ -220,6 +222,18 @@ public class WXTextView extends TextView implements WXGestureObservable {
 
   public WXTextView(Context context) {
     super(context);
+  }
+
+  @Override
+  protected void onDraw(Canvas canvas) {
+    super.onDraw(canvas);
+    canvas.save();
+    Layout layout;
+    if(getTag() instanceof Layout){
+      layout= (Layout) getTag();
+      layout.draw(canvas);
+    }
+    canvas.restore();
   }
 
   @Override

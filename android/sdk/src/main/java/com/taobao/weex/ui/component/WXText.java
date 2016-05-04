@@ -204,6 +204,7 @@
  */
 package com.taobao.weex.ui.component;
 
+import android.text.Layout;
 import android.text.Spannable;
 import android.text.TextUtils;
 import android.text.TextUtils.TruncateAt;
@@ -216,6 +217,7 @@ import com.taobao.weex.WXSDKInstance;
 import com.taobao.weex.common.WXDomPropConstant;
 import com.taobao.weex.dom.WXDomObject;
 import com.taobao.weex.dom.WXStyle;
+import com.taobao.weex.dom.WXTextDomObject;
 import com.taobao.weex.ui.view.WXTextView;
 
 /**
@@ -258,11 +260,16 @@ public class WXText extends WXComponent{
       return;
     }
     int fontSize = WXStyle.getFontSize(mDomObj.style);
-
     getView().setTextSize(TypedValue.COMPLEX_UNIT_PX, fontSize);
-
+    Layout layout=((WXTextDomObject)getDomObject()).layout;
+    if(layout!=null) {
+      getView().setTag(layout);
+    }
+    else{
+      getView().setTag(null);
+      getView().setText(spannable);
+    }
     mPreExtra = spannable;
-    getView().setText(spannable);
   }
 
   @Override
