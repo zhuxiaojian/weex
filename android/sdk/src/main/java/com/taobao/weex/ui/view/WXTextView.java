@@ -212,7 +212,6 @@ import android.view.View;
 
 import com.taobao.weex.ui.view.gesture.WXGesture;
 import com.taobao.weex.ui.view.gesture.WXGestureObservable;
-import com.taobao.weex.utils.WXLogUtils;
 
 /**
  * TextView wrapper
