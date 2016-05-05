@@ -246,17 +246,6 @@ public class WXText extends WXComponent{
     getView().invalidate();
   }
 
-  @WXComponentProp(name = WXDomPropConstant.WX_LINES)
-  public void setLines(int lines) {
-//    TextView temp = getView();
-//    if (lines > 1) {
-//      temp.setSingleLine(false);
-//      temp.setMaxLines(lines);
-//    } else if (lines == 1) {
-//      temp.setSingleLine(true);
-//    }
-  }
-
   @WXComponentProp(name = WXDomPropConstant.WX_TEXT_OVERFLOW)
   public void setTextOverFlow(String textOverFlow) {
 //    TextView temp = getView();
