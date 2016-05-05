@@ -282,8 +282,6 @@ public class WXTextDomObject extends WXDomObject {
             textCSSNode.mFontFamily)));
       }
       ops.add(new SetSpanOperation(start,end,new AlignmentSpan.Standard(textCSSNode.mAlignment)));
-      ops.add(new SetSpanOperation(start, end, new WXTagSpan(
-          textCSSNode.ref)));
     }
   }
 
