@@ -10,6 +10,7 @@ package com.taobao.weex.dom;
 
 import android.graphics.Typeface;
 import android.text.BoringLayout;
+import android.text.Editable;
 import android.text.Layout;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
@@ -71,16 +72,13 @@ public class WXTextDomObject extends WXDomObject {
     @Override
     public void measure(CSSNode node, float width, MeasureOutput measureOutput) {
       WXTextDomObject textDomObject = (WXTextDomObject) node;
-      Spanned text = textDomObject.mPreparedSpannedText;
-      if (text == null) {
+      if (textDomObject.sb.length() == 0) {
         return;
       }
-
       if (CSSConstants.isUndefined(width)) {
         width = node.cssstyle.maxWidth;
       }
-
-      Layout layout = textDomObject.createLayoutFromSpan(width, sTextPaintInstance, text);
+      Layout layout = textDomObject.createLayoutFromEditable(width, sTextPaintInstance);
       measureOutput.height = layout.getHeight();
       measureOutput.width = layout.getWidth();
       textDomObject.layout = layout;
@@ -90,7 +88,6 @@ public class WXTextDomObject extends WXDomObject {
   public static final int UNSET = -1;
   private static final TextPaint sTextPaintInstance = new TextPaint();
   public Layout layout;
-  public Spanned mPreparedSpannedText;
   protected int mNumberOfLines = UNSET;
   protected int mFontSize = UNSET;
   protected Layout.Alignment mAlignment;
@@ -104,6 +101,7 @@ public class WXTextDomObject extends WXDomObject {
   private int mFontWeight = UNSET;
   private String mFontFamily = null;
   private String mText = null;
+  private SpannableStringBuilder sb = new SpannableStringBuilder();
   private WXTextDecoration mTextDecoration = WXTextDecoration.NONE;
 
   static {
@@ -120,21 +118,46 @@ public class WXTextDomObject extends WXDomObject {
     setMeasureFunction(TEXT_MEASURE_FUNCTION);
   }
 
-  private Layout createLayoutFromSpan(float width, TextPaint textPaint, Spanned text) {
-    Layout layout;
-    BoringLayout.Metrics boring = BoringLayout.isBoring(text, textPaint);
-    if (boring != null
-        && (CSSConstants.isUndefined(width) || boring.width <= width)) {
-      layout = BoringLayout.make(text, textPaint, (int) width,
+  private Layout createLayoutFromEditable(float width, TextPaint textPaint) {
+    Layout layout;BoringLayout.Metrics boring = BoringLayout.isBoring(sb, textPaint);
+    float desiredWidth = boring == null ? Layout.getDesiredWidth(sb, textPaint) : Float.NaN;
+
+    if (boring == null
+        && (CSSConstants.isUndefined(width) || (!CSSConstants
+        .isUndefined(desiredWidth) && desiredWidth <= width))) {
+      // Is used when the width is not known and the text is not
+      // boring, ie. if it contains
+      // unicode characters.
+      layout = new StaticLayout(sb, textPaint,
+                                (int) Math.ceil(desiredWidth),
+                                Layout.Alignment.ALIGN_NORMAL, 1, 0, false);
+    } else if (boring != null
+               && (CSSConstants.isUndefined(width) || boring.width <= width)) {
+      // Is used for single-line, boring text when the width is either
+      // unknown or bigger
+      // than the width of the text.
+      layout = BoringLayout.make(sb, textPaint, boring.width,
                                  Layout.Alignment.ALIGN_NORMAL, 1, 0, boring, false);
     } else {
-      layout = new StaticLayout(text, textPaint, (int) width,
+      // Is used for multiline, boring text and the width is known.
+      layout = new StaticLayout(sb, textPaint, (int) width,
                                 Layout.Alignment.ALIGN_NORMAL, 1, 0, false);
     }
+//    Layout layout;
+//    Editable text=sb;
+//    BoringLayout.Metrics boring = BoringLayout.isBoring(text, textPaint);
+//    if (boring != null
+//        && (CSSConstants.isUndefined(width) || boring.width <= width)) {
+//      layout = BoringLayout.make(text, textPaint, (int) width,
+//                                 Layout.Alignment.ALIGN_NORMAL, 1, 0, boring, false);
+//    } else {
+//      layout = new StaticLayout(text, textPaint, (int) width,
+//                                Layout.Alignment.ALIGN_NORMAL, 1, 0, false);
+//    }
     if (mNumberOfLines != UNSET && mNumberOfLines < layout.getLineCount()) {
-      int textEnd = layout.getLineEnd(mNumberOfLines-1);
-      textEnd=textEnd+1<layout.getText().length()?textEnd+1:textEnd;
-      layout = new StaticLayout(text, 0, textEnd, textPaint, (int) width,
+      int textEnd = layout.getLineEnd(mNumberOfLines - 1);
+      textEnd = textEnd + 1 < layout.getText().length() ? textEnd + 1 : textEnd;
+      layout = new StaticLayout(sb, 0, textEnd, textPaint, (int) width,
                                 Layout.Alignment.ALIGN_NORMAL, 1, 0, false);
     }
     return layout;
@@ -148,7 +171,7 @@ public class WXTextDomObject extends WXDomObject {
   @Override
   public void layoutBefore() {
     initData();
-    mPreparedSpannedText = fromTextCSSNode(this);
+    buildEditable();
     super.dirty();
     super.layoutBefore();
   }
@@ -156,14 +179,14 @@ public class WXTextDomObject extends WXDomObject {
   @Override
   public void layoutAfter() {
     if (layout == null) {
-      layout = createLayoutFromSpan(getLayoutWidth(), sTextPaintInstance, mPreparedSpannedText);
+      layout = createLayoutFromEditable(getLayoutWidth(), sTextPaintInstance);
     }
     super.layoutAfter();
   }
 
   @Override
   public Object getExtra() {
-    return mPreparedSpannedText;
+    return sb;
   }
 
   @Override
@@ -204,7 +227,7 @@ public class WXTextDomObject extends WXDomObject {
       }
     }
     if (dom != null) {
-      dom.mPreparedSpannedText = mPreparedSpannedText;
+      dom.sb = sb;
     }
     return dom;
   }
@@ -247,11 +270,12 @@ public class WXTextDomObject extends WXDomObject {
     }
   }
 
-  protected static Spanned fromTextCSSNode(WXTextDomObject textCSSNode) {
-    SpannableStringBuilder sb = new SpannableStringBuilder();
+  protected Editable buildEditable() {
     List<SetSpanOperation> ops = new ArrayList<>();
-    buildSpannedFromTextCSSNode(textCSSNode, sb, ops);
-    if (textCSSNode.mFontSize == UNSET) {
+    sb.clear();
+    sb.clearSpans();
+    buildSpannedFromTextCSSNode(sb, ops);
+    if (mFontSize == UNSET) {
       sb.setSpan(
           new AbsoluteSizeSpan(WXText.sDEFAULT_SIZE), 0, sb
               .length(), Spannable.SPAN_INCLUSIVE_EXCLUSIVE);
@@ -263,39 +287,35 @@ public class WXTextDomObject extends WXDomObject {
     return sb;
   }
 
-  private static void buildSpannedFromTextCSSNode(
-      WXTextDomObject textCSSNode, SpannableStringBuilder sb,
-      List<SetSpanOperation> ops) {
+  private void buildSpannedFromTextCSSNode(SpannableStringBuilder sb, List<SetSpanOperation> ops) {
     int start = 0;
-    if (textCSSNode.mText != null) {
-      sb.append(textCSSNode.mText);
+    if (mText != null) {
+      sb.append(mText);
     }
     int end = sb.length();
     if (end >= start) {
-      if (textCSSNode.mTextDecoration == WXTextDecoration.UNDERLINE) {
+      if (mTextDecoration == WXTextDecoration.UNDERLINE) {
         ops.add(new SetSpanOperation(start, end,
                                      new UnderlineSpan()));
       }
-      if (textCSSNode.mTextDecoration == WXTextDecoration.LINETHROUGH) {
+      if (mTextDecoration == WXTextDecoration.LINETHROUGH) {
         ops.add(new SetSpanOperation(start, end,
                                      new StrikethroughSpan()));
       }
-      if (textCSSNode.mIsColorSet) {
+      if (mIsColorSet) {
         ops.add(new SetSpanOperation(start, end,
-                                     new ForegroundColorSpan(textCSSNode.mColor)));
+                                     new ForegroundColorSpan(mColor)));
       }
-      if (textCSSNode.mFontSize != UNSET) {
-        ops.add(new SetSpanOperation(start, end, new AbsoluteSizeSpan(
-            textCSSNode.mFontSize)));
+      if (mFontSize != UNSET) {
+        ops.add(new SetSpanOperation(start, end, new AbsoluteSizeSpan(mFontSize)));
       }
-      if (textCSSNode.mFontStyle != UNSET
-          || textCSSNode.mFontWeight != UNSET
-          || textCSSNode.mFontFamily != null) {
-        ops.add(new SetSpanOperation(start, end, new WXCustomStyleSpan(
-            textCSSNode.mFontStyle, textCSSNode.mFontWeight,
-            textCSSNode.mFontFamily)));
+      if (mFontStyle != UNSET
+          || mFontWeight != UNSET
+          || mFontFamily != null) {
+        ops.add(new SetSpanOperation(start, end,
+                                     new WXCustomStyleSpan(mFontStyle, mFontWeight, mFontFamily)));
       }
-      ops.add(new SetSpanOperation(start, end, new AlignmentSpan.Standard(textCSSNode.mAlignment)));
+      ops.add(new SetSpanOperation(start, end, new AlignmentSpan.Standard(mAlignment)));
     }
   }
 
