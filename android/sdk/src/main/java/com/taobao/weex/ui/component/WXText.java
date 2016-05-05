@@ -246,10 +246,6 @@ public class WXText extends WXComponent{
     getView().invalidate();
   }
 
-  @WXComponentProp(name = WXDomPropConstant.WX_TEXTALIGN)
-  public void setTextAlign(String textAlign) {
-  }
-
   @WXComponentProp(name = WXDomPropConstant.WX_LINES)
   public void setLines(int lines) {
 //    TextView temp = getView();

@@ -237,8 +237,24 @@ import java.util.Map;
  */
 public class WXTextDomObject extends WXDomObject {
 
-  public static final int UNSET = -1;
-  private static final TextPaint sTextPaintInstance = new TextPaint();
+  private static class SetSpanOperation {
+    protected int start, end;
+    protected Object what;
+    SetSpanOperation(int start, int end, Object what) {
+      this.start = start;
+      this.end = end;
+      this.what = what;
+    }
+    public void execute(SpannableStringBuilder sb) {
+      int spanFlags = Spannable.SPAN_EXCLUSIVE_INCLUSIVE;
+      if (start == 0) {
+        spanFlags = Spannable.SPAN_INCLUSIVE_INCLUSIVE;
+      }
+      sb.setSpan(what, start, end, spanFlags);
+    }
+  }
+
+
   /**
    * Object for calculating text's width and height. This class is an anonymous class of
    * implementing {@link com.taobao.weex.dom.flex.CSSNode.MeasureFunction}
@@ -267,11 +283,10 @@ public class WXTextDomObject extends WXDomObject {
       }
       textDomObject.layout = layout;
     }
-
   };
 
-
-
+  public static final int UNSET = -1;
+  private static final TextPaint sTextPaintInstance = new TextPaint();
   public Layout layout;
   public Spanned mPreparedSpannedText;
   protected int mNumberOfLines = UNSET;
@@ -468,23 +483,4 @@ public class WXTextDomObject extends WXDomObject {
     }
   }
 
-  private static class SetSpanOperation {
-
-    protected int start, end;
-    protected Object what;
-
-    SetSpanOperation(int start, int end, Object what) {
-      this.start = start;
-      this.end = end;
-      this.what = what;
-    }
-
-    public void execute(SpannableStringBuilder sb) {
-      int spanFlags = Spannable.SPAN_EXCLUSIVE_INCLUSIVE;
-      if (start == 0) {
-        spanFlags = Spannable.SPAN_INCLUSIVE_INCLUSIVE;
-      }
-      sb.setSpan(what, start, end, spanFlags);
-    }
-  }
 }
