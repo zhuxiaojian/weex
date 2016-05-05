@@ -212,6 +212,7 @@ import android.view.View;
 
 import com.taobao.weex.ui.view.gesture.WXGesture;
 import com.taobao.weex.ui.view.gesture.WXGestureObservable;
+import com.taobao.weex.utils.WXLogUtils;
 
 /**
  * TextView wrapper
@@ -231,6 +232,7 @@ public class WXTextView extends View implements WXGestureObservable, IWXTextView
     Layout layout;
     if(getTag() instanceof Layout){
       layout= (Layout) getTag();
+      canvas.translate(getPaddingLeft(),getPaddingTop());
       layout.draw(canvas);
     }
     canvas.restore();

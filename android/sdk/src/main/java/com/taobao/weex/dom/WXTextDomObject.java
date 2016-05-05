@@ -256,7 +256,7 @@ public class WXTextDomObject extends WXDomObject {
         width = node.cssstyle.maxWidth;
       }
 
-      Layout layout = createLayoutFromSpan(width, sTextPaintInstance, text, ((WXTextDomObject) node).mAlignment);
+      Layout layout = createLayoutFromSpan(width, sTextPaintInstance, text);
 
       measureOutput.height = layout.getHeight();
       measureOutput.width = layout.getWidth();
@@ -272,22 +272,7 @@ public class WXTextDomObject extends WXDomObject {
 
   };
 
-  public static Layout createLayoutFromSpan(float width, TextPaint textPaint, Spanned text,
-                                            Layout.Alignment alignment) {
-    StaticLayout layout;
-    float desiredWidth = Layout.getDesiredWidth(text, textPaint);
-    if (CSSConstants.isUndefined(width) || desiredWidth <= width) {
-      layout = new StaticLayout(text, textPaint, (int) Math.ceil(desiredWidth),
-                                alignment, 1, 0, false);
-    } else {
-      layout = new StaticLayout(text, textPaint, (int) width, alignment, 1, 0, false);
-    }
-    return layout;
-  }
 
-  static {
-    sTextPaintInstance.setFlags(TextPaint.ANTI_ALIAS_FLAG);
-  }
 
   public Layout layout;
   public Spanned mPreparedSpannedText;
@@ -306,6 +291,10 @@ public class WXTextDomObject extends WXDomObject {
   private String mText = null;
   private WXTextDecoration mTextDecoration = WXTextDecoration.NONE;
 
+  static {
+    sTextPaintInstance.setFlags(TextPaint.ANTI_ALIAS_FLAG);
+  }
+
   /**
    * Create an instance of current class, and set {@link #TEXT_MEASURE_FUNCTION} as the
    * measureFunction
@@ -314,6 +303,10 @@ public class WXTextDomObject extends WXDomObject {
   public WXTextDomObject() {
     super();
     setMeasureFunction(TEXT_MEASURE_FUNCTION);
+  }
+
+  private static Layout createLayoutFromSpan(float width, TextPaint textPaint, Spanned text) {
+    return new StaticLayout(text, textPaint, (int) width, Layout.Alignment.ALIGN_NORMAL, 1, 0, false);
   }
 
   /**
@@ -332,8 +325,7 @@ public class WXTextDomObject extends WXDomObject {
   @Override
   public void layoutAfter() {
     if (layout == null) {
-      layout = createLayoutFromSpan(getLayoutWidth(), sTextPaintInstance, mPreparedSpannedText,
-                                    mAlignment);
+      layout = createLayoutFromSpan(getLayoutWidth(), sTextPaintInstance, mPreparedSpannedText);
     }
     super.layoutAfter();
   }
@@ -443,8 +435,7 @@ public class WXTextDomObject extends WXDomObject {
   private static void buildSpannedFromTextCSSNode(
       WXTextDomObject textCSSNode, SpannableStringBuilder sb,
       List<SetSpanOperation> ops) {
-    //Length of the text.
-    int start = sb.length();
+    int start = 0;
     if (textCSSNode.mText != null) {
       sb.append(textCSSNode.mText);
     }
