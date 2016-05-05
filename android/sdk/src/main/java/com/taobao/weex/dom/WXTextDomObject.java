@@ -265,8 +265,6 @@ public class WXTextDomObject extends WXDomObject {
         measureOutput.height = layout
             .getLineBottom(textDomObject.mNumberOfLines - 1);
       }
-      measureOutput.height = measureOutput.height + layout.getTopPadding() - layout
-          .getBottomPadding();
       textDomObject.layout = layout;
     }
 
