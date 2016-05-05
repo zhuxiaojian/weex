@@ -205,7 +205,6 @@
 package com.taobao.weex.dom;
 
 import android.graphics.Typeface;
-import android.text.BoringLayout;
 import android.text.Layout;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
@@ -213,6 +212,7 @@ import android.text.Spanned;
 import android.text.StaticLayout;
 import android.text.TextPaint;
 import android.text.style.AbsoluteSizeSpan;
+import android.text.style.AlignmentSpan;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.StrikethroughSpan;
 import android.text.style.UnderlineSpan;
@@ -247,18 +247,16 @@ public class WXTextDomObject extends WXDomObject {
     @Override
     public void measure(CSSNode node, float width, MeasureOutput measureOutput) {
       WXTextDomObject textDomObject = (WXTextDomObject) node;
-      TextPaint textPaint = sTextPaintInstance;
-      Layout layout;
       Spanned text = textDomObject.mPreparedSpannedText;
       if (text == null) {
         return;
       }
 
-      if(CSSConstants.isUndefined(width)){
-        width=node.cssstyle.maxWidth;
+      if (CSSConstants.isUndefined(width)) {
+        width = node.cssstyle.maxWidth;
       }
 
-      layout = createLayoutFromSpan(width, textPaint, text);
+      Layout layout = createLayoutFromSpan(width, sTextPaintInstance, text, ((WXTextDomObject) node).mAlignment);
 
       measureOutput.height = layout.getHeight();
       measureOutput.width = layout.getWidth();
@@ -269,37 +267,20 @@ public class WXTextDomObject extends WXDomObject {
       }
       measureOutput.height = measureOutput.height + layout.getTopPadding() - layout
           .getBottomPadding();
-      textDomObject.layout=layout;
+      textDomObject.layout = layout;
     }
 
   };
 
-  public static Layout createLayoutFromSpan(float width, TextPaint textPaint, Spanned text) {
-    Layout layout;BoringLayout.Metrics boring = BoringLayout
-        .isBoring(text, textPaint);
-    float desiredWidth = boring == null ? Layout.getDesiredWidth(text,
-                                                                 textPaint) : Float.NaN;
-
-    if (boring == null
-        && (CSSConstants.isUndefined(width) || (!CSSConstants
-        .isUndefined(desiredWidth) && desiredWidth <= width))) {
-      // Is used when the width is not known and the text is not
-      // boring, ie. if it contains
-      // unicode characters.
-      layout = new StaticLayout(text, textPaint,
-                                (int) Math.ceil(desiredWidth),
-                                Layout.Alignment.ALIGN_NORMAL, 1, 0, false);
-    } else if (boring != null
-               && (CSSConstants.isUndefined(width) || boring.width <= width)) {
-      // Is used for single-line, boring text when the width is either
-      // unknown or bigger
-      // than the width of the text.
-      layout = BoringLayout.make(text, textPaint, boring.width,
-                                 Layout.Alignment.ALIGN_NORMAL, 1, 0, boring, false);
+  public static Layout createLayoutFromSpan(float width, TextPaint textPaint, Spanned text,
+                                            Layout.Alignment alignment) {
+    StaticLayout layout;
+    float desiredWidth = Layout.getDesiredWidth(text, textPaint);
+    if (CSSConstants.isUndefined(width) || desiredWidth <= width) {
+      layout = new StaticLayout(text, textPaint, (int) Math.ceil(desiredWidth),
+                                alignment, 1, 0, false);
     } else {
-      // Is used for multiline, boring text and the width is known.
-      layout = new StaticLayout(text, textPaint, (int) width,
-                                Layout.Alignment.ALIGN_NORMAL, 1, 0, false);
+      layout = new StaticLayout(text, textPaint, (int) width, alignment, 1, 0, false);
     }
     return layout;
   }
@@ -312,6 +293,7 @@ public class WXTextDomObject extends WXDomObject {
   public Spanned mPreparedSpannedText;
   protected int mNumberOfLines = UNSET;
   protected int mFontSize = UNSET;
+  protected Layout.Alignment mAlignment;
   private boolean mIsColorSet = false;
   private int mColor;
   /**
@@ -348,6 +330,15 @@ public class WXTextDomObject extends WXDomObject {
   }
 
   @Override
+  public void layoutAfter() {
+    if (layout == null) {
+      layout = createLayoutFromSpan(getLayoutWidth(), sTextPaintInstance, mPreparedSpannedText,
+                                    mAlignment);
+    }
+    super.layoutAfter();
+  }
+
+  @Override
   public Object getExtra() {
     return mPreparedSpannedText;
   }
@@ -380,7 +371,7 @@ public class WXTextDomObject extends WXDomObject {
       dom.style = style;
       dom.attr = attr;
       dom.event = event == null ? null : event.clone();
-      dom.layout=layout;
+      dom.layout = layout;
       if (this.csslayout != null) {
         dom.csslayout.copy(this.csslayout);
       }
@@ -389,7 +380,9 @@ public class WXTextDomObject extends WXDomObject {
         WXLogUtils.e("WXTextDomObject clone error: " + WXLogUtils.getStackTrace(e));
       }
     }
-    dom.mPreparedSpannedText = mPreparedSpannedText;
+    if (dom != null) {
+      dom.mPreparedSpannedText = mPreparedSpannedText;
+    }
     return dom;
   }
 
@@ -400,9 +393,9 @@ public class WXTextDomObject extends WXDomObject {
     }
   }
 
-  protected static final Spanned fromTextCSSNode(WXTextDomObject textCSSNode) {
+  protected static Spanned fromTextCSSNode(WXTextDomObject textCSSNode) {
     SpannableStringBuilder sb = new SpannableStringBuilder();
-    List<SetSpanOperation> ops = new ArrayList<SetSpanOperation>();
+    List<SetSpanOperation> ops = new ArrayList<>();
     buildSpannedFromTextCSSNode(textCSSNode, sb, ops);
     if (textCSSNode.mFontSize == UNSET) {
       sb.setSpan(
@@ -443,10 +436,11 @@ public class WXTextDomObject extends WXDomObject {
       if (style.containsKey(WXDomPropConstant.WX_FONTFAMILY)) {
         mFontFamily = WXStyle.getFontFamily(style);
       }
+      mAlignment = WXStyle.getTextAlignment(style);
     }
   }
 
-  private static final void buildSpannedFromTextCSSNode(
+  private static void buildSpannedFromTextCSSNode(
       WXTextDomObject textCSSNode, SpannableStringBuilder sb,
       List<SetSpanOperation> ops) {
     //Length of the text.
@@ -479,6 +473,7 @@ public class WXTextDomObject extends WXDomObject {
             textCSSNode.mFontStyle, textCSSNode.mFontWeight,
             textCSSNode.mFontFamily)));
       }
+      ops.add(new SetSpanOperation(start,end,new AlignmentSpan.Standard(textCSSNode.mAlignment)));
       ops.add(new SetSpanOperation(start, end, new WXTagSpan(
           textCSSNode.ref)));
     }

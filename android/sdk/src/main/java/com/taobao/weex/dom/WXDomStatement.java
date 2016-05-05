@@ -363,6 +363,8 @@ class WXDomStatement {
     //			WXLogUtils.d("csslayout", "------------end------------");
     //		}
 
+    layoutAfter(rootDom);
+
     applyUpdate(rootDom);
 
     updateDomObj();
@@ -395,6 +397,17 @@ class WXDomStatement {
     int count = dom.childCount();
     for (int i = 0; i < count; ++i) {
       layoutBefore(dom.getChild(i));
+    }
+  }
+
+  private void layoutAfter(WXDomObject dom){
+    if (dom == null || mDestroy) {
+      return;
+    }
+    dom.layoutAfter();
+    int count = dom.childCount();
+    for (int i = 0; i < count; ++i) {
+      layoutAfter(dom.getChild(i));
     }
   }
 
