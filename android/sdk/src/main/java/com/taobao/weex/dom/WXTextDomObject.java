@@ -216,22 +216,6 @@ public class WXTextDomObject extends WXDomObject {
     }
   }
 
-  protected static Spanned fromTextCSSNode(WXTextDomObject textCSSNode) {
-    SpannableStringBuilder sb = new SpannableStringBuilder();
-    List<SetSpanOperation> ops = new ArrayList<>();
-    buildSpannedFromTextCSSNode(textCSSNode, sb, ops);
-    if (textCSSNode.mFontSize == UNSET) {
-      sb.setSpan(
-          new AbsoluteSizeSpan(WXText.sDEFAULT_SIZE), 0, sb
-              .length(), Spannable.SPAN_INCLUSIVE_EXCLUSIVE);
-    }
-    for (int i = ops.size() - 1; i >= 0; i--) {
-      SetSpanOperation op = ops.get(i);
-      op.execute(sb);
-    }
-    return sb;
-  }
-
   private void update(Map<String, Object> style) {
     if (style != null) {
       if (style.containsKey(WXDomPropConstant.WX_LINES)) {
@@ -261,6 +245,22 @@ public class WXTextDomObject extends WXDomObject {
       }
       mAlignment = WXStyle.getTextAlignment(style);
     }
+  }
+
+  protected static Spanned fromTextCSSNode(WXTextDomObject textCSSNode) {
+    SpannableStringBuilder sb = new SpannableStringBuilder();
+    List<SetSpanOperation> ops = new ArrayList<>();
+    buildSpannedFromTextCSSNode(textCSSNode, sb, ops);
+    if (textCSSNode.mFontSize == UNSET) {
+      sb.setSpan(
+          new AbsoluteSizeSpan(WXText.sDEFAULT_SIZE), 0, sb
+              .length(), Spannable.SPAN_INCLUSIVE_EXCLUSIVE);
+    }
+    for (int i = ops.size() - 1; i >= 0; i--) {
+      SetSpanOperation op = ops.get(i);
+      op.execute(sb);
+    }
+    return sb;
   }
 
   private static void buildSpannedFromTextCSSNode(
