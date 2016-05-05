@@ -9,6 +9,7 @@
 package com.taobao.weex.dom;
 
 import android.graphics.Typeface;
+import android.text.BoringLayout;
 import android.text.Layout;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
@@ -42,13 +43,16 @@ import java.util.Map;
 public class WXTextDomObject extends WXDomObject {
 
   private static class SetSpanOperation {
+
     protected int start, end;
     protected Object what;
+
     SetSpanOperation(int start, int end, Object what) {
       this.start = start;
       this.end = end;
       this.what = what;
     }
+
     public void execute(SpannableStringBuilder sb) {
       int spanFlags = Spannable.SPAN_EXCLUSIVE_INCLUSIVE;
       if (start == 0) {
@@ -76,15 +80,9 @@ public class WXTextDomObject extends WXDomObject {
         width = node.cssstyle.maxWidth;
       }
 
-      Layout layout = createLayoutFromSpan(width, sTextPaintInstance, text);
-
+      Layout layout = textDomObject.createLayoutFromSpan(width, sTextPaintInstance, text);
       measureOutput.height = layout.getHeight();
       measureOutput.width = layout.getWidth();
-      if (textDomObject.mNumberOfLines != UNSET
-          && textDomObject.mNumberOfLines < layout.getLineCount()) {
-        measureOutput.height = layout
-            .getLineBottom(textDomObject.mNumberOfLines - 1);
-      }
       textDomObject.layout = layout;
     }
   };
@@ -122,8 +120,24 @@ public class WXTextDomObject extends WXDomObject {
     setMeasureFunction(TEXT_MEASURE_FUNCTION);
   }
 
-  private static Layout createLayoutFromSpan(float width, TextPaint textPaint, Spanned text) {
-    return new StaticLayout(text, textPaint, (int) width, Layout.Alignment.ALIGN_NORMAL, 1, 0, false);
+  private Layout createLayoutFromSpan(float width, TextPaint textPaint, Spanned text) {
+    Layout layout;
+    BoringLayout.Metrics boring = BoringLayout.isBoring(text, textPaint);
+    if (boring != null
+        && (CSSConstants.isUndefined(width) || boring.width <= width)) {
+      layout = BoringLayout.make(text, textPaint, (int) width,
+                                 Layout.Alignment.ALIGN_NORMAL, 1, 0, boring, false);
+    } else {
+      layout = new StaticLayout(text, textPaint, (int) width,
+                                Layout.Alignment.ALIGN_NORMAL, 1, 0, false);
+    }
+    if (mNumberOfLines != UNSET && mNumberOfLines < layout.getLineCount()) {
+      int textEnd = layout.getLineEnd(mNumberOfLines-1);
+      textEnd=textEnd+1<layout.getText().length()?textEnd+1:textEnd;
+      layout = new StaticLayout(text, 0, textEnd, textPaint, (int) width,
+                                Layout.Alignment.ALIGN_NORMAL, 1, 0, false);
+    }
+    return layout;
   }
 
   /**
@@ -281,7 +295,7 @@ public class WXTextDomObject extends WXDomObject {
             textCSSNode.mFontStyle, textCSSNode.mFontWeight,
             textCSSNode.mFontFamily)));
       }
-      ops.add(new SetSpanOperation(start,end,new AlignmentSpan.Standard(textCSSNode.mAlignment)));
+      ops.add(new SetSpanOperation(start, end, new AlignmentSpan.Standard(textCSSNode.mAlignment)));
     }
   }
 
