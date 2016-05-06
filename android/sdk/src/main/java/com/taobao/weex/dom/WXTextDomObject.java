@@ -10,6 +10,7 @@ package com.taobao.weex.dom;
 
 import android.graphics.Typeface;
 import android.text.BoringLayout;
+import android.text.DynamicLayout;
 import android.text.Editable;
 import android.text.Layout;
 import android.text.Spannable;
@@ -82,6 +83,7 @@ public class WXTextDomObject extends WXDomObject {
       measureOutput.height = layout.getHeight();
       measureOutput.width = layout.getWidth();
       textDomObject.layout = layout;
+      textDomObject.hasBeenLayout = true;
     }
   };
 
@@ -92,6 +94,7 @@ public class WXTextDomObject extends WXDomObject {
   protected int mFontSize = UNSET;
   protected Layout.Alignment mAlignment;
   private boolean mIsColorSet = false;
+  private boolean hasBeenLayout = false;
   private int mColor;
   /**
    * mFontStyle can be {@link Typeface#NORMAL} or {@link Typeface#ITALIC}.
@@ -106,6 +109,16 @@ public class WXTextDomObject extends WXDomObject {
 
   static {
     sTextPaintInstance.setFlags(TextPaint.ANTI_ALIAS_FLAG);
+  }
+
+  private static void updateLayout(WXTextDomObject textDomObject, float width, TextPaint textPaint) {
+    int textWidth = (int) Math.ceil(CSSConstants.isUndefined(width) ?
+                                    Layout.getDesiredWidth(textDomObject.sb, textPaint) : width);
+
+    if (textDomObject.layout == null) {
+      textDomObject.layout = new DynamicLayout(textDomObject.sb, textPaint, textWidth, Layout.Alignment
+          .ALIGN_NORMAL, 1, 0, false);
+    }
   }
 
   private static Layout createLayoutFromEditable(WXTextDomObject textDomObject, float width, TextPaint
@@ -152,7 +165,7 @@ public class WXTextDomObject extends WXDomObject {
    */
   @Override
   public void layoutBefore() {
-    layout = null;
+    hasBeenLayout = false;
     initData();
     buildEditable();
     super.dirty();
@@ -161,7 +174,8 @@ public class WXTextDomObject extends WXDomObject {
 
   @Override
   public void layoutAfter() {
-    if (layout == null) {
+    if (!hasBeenLayout) {
+      hasBeenLayout = true;
       layout = createLayoutFromEditable(this, getLayoutWidth(), sTextPaintInstance);
     }
     super.layoutAfter();
