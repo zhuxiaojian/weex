@@ -28,7 +28,6 @@ import com.taobao.weex.common.WXDomPropConstant;
 import com.taobao.weex.dom.flex.CSSConstants;
 import com.taobao.weex.dom.flex.CSSNode;
 import com.taobao.weex.dom.flex.MeasureOutput;
-import com.taobao.weex.dom.flex.Spacing;
 import com.taobao.weex.ui.component.WXText;
 import com.taobao.weex.ui.component.WXTextDecoration;
 import com.taobao.weex.utils.WXLogUtils;
@@ -79,7 +78,7 @@ public class WXTextDomObject extends WXDomObject {
       if (CSSConstants.isUndefined(width)) {
         width = node.cssstyle.maxWidth;
       }
-      Layout layout = createLayoutFromEditable(textDomObject.sb, width, sTextPaintInstance);
+      Layout layout = createLayoutFromEditable(textDomObject, width, sTextPaintInstance);
       measureOutput.height = layout.getHeight();
       measureOutput.width = layout.getWidth();
       textDomObject.layout = layout;
@@ -109,33 +108,30 @@ public class WXTextDomObject extends WXDomObject {
     sTextPaintInstance.setFlags(TextPaint.ANTI_ALIAS_FLAG);
   }
 
-  private static Layout createLayoutFromEditable(Editable editable, float width, TextPaint textPaint) {
+  private static Layout createLayoutFromEditable(WXTextDomObject textDomObject, float width, TextPaint
+      textPaint) {
     Layout layout;
-    BoringLayout.Metrics boring = BoringLayout.isBoring(editable, textPaint);
-    float desiredWidth = boring == null ? Layout.getDesiredWidth(editable, textPaint) : Float.NaN;
-
-    if (boring == null
-        && (CSSConstants.isUndefined(width) || (!CSSConstants
-        .isUndefined(desiredWidth) && desiredWidth <= width))) {
-      // Is used when the width is not known and the text is not
-      // boring, ie. if it contains
-      // unicode characters.
-      layout = new StaticLayout(editable, textPaint,
-                                (int) Math.ceil(desiredWidth),
-                                Layout.Alignment.ALIGN_NORMAL, 1, 0, false);
-    } else if (boring != null
-               && (CSSConstants.isUndefined(width) || boring.width <= width)) {
-      // Is used for single-line, boring text when the width is either
-      // unknown or bigger
-      // than the width of the text.
-      layout = BoringLayout.make(editable, textPaint, boring.width,
-                                 Layout.Alignment.ALIGN_NORMAL, 1, 0, boring, false);
+    BoringLayout.Metrics boring = BoringLayout.isBoring(textDomObject.sb, textPaint);
+    float desiredWidth = boring == null ? Layout.getDesiredWidth(textDomObject.sb, textPaint) : Float.NaN;
+    if (CSSConstants.isUndefined(width)) {
+      if (boring == null) {
+        layout = new StaticLayout(textDomObject.sb, textPaint,
+                                  (int) Math.ceil(desiredWidth),
+                                  Layout.Alignment.ALIGN_NORMAL, 1, 0, false);
+      } else {
+        layout = BoringLayout.make(textDomObject.sb, textPaint, boring.width,
+                                   Layout.Alignment.ALIGN_NORMAL, 1, 0, boring, false);
+      }
     } else {
-      // Is used for multiline, boring text and the width is known.
-      layout = new StaticLayout(editable, textPaint, (int) width,
+      layout = new StaticLayout(textDomObject.sb, textPaint, (int) width,
                                 Layout.Alignment.ALIGN_NORMAL, 1, 0, false);
     }
-
+    if (textDomObject.mNumberOfLines != UNSET && textDomObject.mNumberOfLines < layout.getLineCount()) {
+      int textEnd = layout.getLineEnd(textDomObject.mNumberOfLines - 1);
+      textEnd = textEnd + 1 < layout.getText().length() ? textEnd + 1 : textEnd;
+      layout = new StaticLayout(textDomObject.sb, 0, textEnd, textPaint, layout.getWidth(),
+                                Layout.Alignment.ALIGN_NORMAL, 1, 0, false);
+    }
     return layout;
   }
 
@@ -147,23 +143,6 @@ public class WXTextDomObject extends WXDomObject {
   public WXTextDomObject() {
     super();
     setMeasureFunction(TEXT_MEASURE_FUNCTION);
-  }
-
-  private Layout updateLayout(Layout layout, TextPaint textPaint) {
-    Layout newLayout = layout;
-    int layoutWidth = (int) (getLayoutWidth() - getPadding().get(Spacing.LEFT) - getPadding().get
-        (Spacing.RIGHT));
-    if (layout.getWidth() != layoutWidth) {
-      newLayout = new StaticLayout(sb, textPaint, layoutWidth,
-                                   Layout.Alignment.ALIGN_NORMAL, 1, 0, false);
-    }
-    if (mNumberOfLines != UNSET && mNumberOfLines < newLayout.getLineCount()) {
-      int textEnd = newLayout.getLineEnd(mNumberOfLines - 1);
-      textEnd = textEnd + 1 < newLayout.getText().length() ? textEnd + 1 : textEnd;
-      newLayout = new StaticLayout(sb, 0, textEnd, textPaint, layoutWidth,
-                                   Layout.Alignment.ALIGN_NORMAL, 1, 0, false);
-    }
-    return newLayout;
   }
 
   /**
@@ -183,9 +162,8 @@ public class WXTextDomObject extends WXDomObject {
   @Override
   public void layoutAfter() {
     if (layout == null) {
-      layout = createLayoutFromEditable(sb, getLayoutWidth(), sTextPaintInstance);
+      layout = createLayoutFromEditable(this, getLayoutWidth(), sTextPaintInstance);
     }
-    layout = updateLayout(layout, sTextPaintInstance);
     super.layoutAfter();
   }
 
