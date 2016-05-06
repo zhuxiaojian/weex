@@ -18,6 +18,7 @@ import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.StaticLayout;
 import android.text.TextPaint;
+import android.text.TextUtils;
 import android.text.style.AbsoluteSizeSpan;
 import android.text.style.AlignmentSpan;
 import android.text.style.ForegroundColorSpan;
@@ -73,13 +74,13 @@ public class WXTextDomObject extends WXDomObject {
     @Override
     public void measure(CSSNode node, float width, MeasureOutput measureOutput) {
       WXTextDomObject textDomObject = (WXTextDomObject) node;
-      if (textDomObject.sb.length() == 0) {
+      if (textDomObject.spannableStringBuilder.length() == 0) {
         return;
       }
       if (CSSConstants.isUndefined(width)) {
         width = node.cssstyle.maxWidth;
       }
-      Layout layout = createLayoutFromEditable(textDomObject, width, sTextPaintInstance);
+      Layout layout=createLayoutFromEditable(textDomObject, width, sTextPaintInstance);
       measureOutput.height = layout.getHeight();
       measureOutput.width = layout.getWidth();
       textDomObject.layout = layout;
@@ -104,7 +105,9 @@ public class WXTextDomObject extends WXDomObject {
   private int mFontWeight = UNSET;
   private String mFontFamily = null;
   private String mText = null;
-  private SpannableStringBuilder sb = new SpannableStringBuilder();
+  private TextUtils.TruncateAt textOverflow;
+  private StringBuilder stringBuilder=new StringBuilder();
+  private SpannableStringBuilder spannableStringBuilder = new SpannableStringBuilder();
   private WXTextDecoration mTextDecoration = WXTextDecoration.NONE;
 
   static {
@@ -113,36 +116,57 @@ public class WXTextDomObject extends WXDomObject {
 
   private static void updateLayout(WXTextDomObject textDomObject, float width, TextPaint textPaint) {
     int textWidth = (int) Math.ceil(CSSConstants.isUndefined(width) ?
-                                    Layout.getDesiredWidth(textDomObject.sb, textPaint) : width);
+                                    Layout.getDesiredWidth(textDomObject.spannableStringBuilder, textPaint) : width);
 
     if (textDomObject.layout == null) {
-      textDomObject.layout = new DynamicLayout(textDomObject.sb, textPaint, textWidth, Layout.Alignment
+      textDomObject.layout = new DynamicLayout(textDomObject.spannableStringBuilder, textPaint, textWidth, Layout.Alignment
           .ALIGN_NORMAL, 1, 0, false);
+    }
+    if (textDomObject.mNumberOfLines != UNSET &&
+        textDomObject.mNumberOfLines != 0 &&
+        textDomObject.mNumberOfLines < textDomObject.layout.getLineCount()) {
+      int lastLineStart = textDomObject.layout.getLineStart(textDomObject.mNumberOfLines);
+      CharSequence reminder,main;
+      if (textDomObject.textOverflow != null) {
+        reminder = TextUtils.ellipsize(
+            textDomObject.spannableStringBuilder.subSequence(lastLineStart, textDomObject.spannableStringBuilder.length()),
+            textPaint, textWidth, textDomObject.textOverflow);
+      } else {
+        int lastLineEnd = textDomObject.layout.getLineEnd(textDomObject.mNumberOfLines);
+        reminder = textDomObject.spannableStringBuilder.subSequence(lastLineStart, lastLineEnd);
+      }
+      main = textDomObject.spannableStringBuilder.subSequence(0, lastLineStart);
+      textDomObject.spannableStringBuilder.clear();
+      textDomObject.spannableStringBuilder.clearSpans();
+      textDomObject.stringBuilder.setLength(0);
+      textDomObject.stringBuilder.append(main);
+      textDomObject.stringBuilder.append(reminder);
+      textDomObject.updateSpannableStringBuilder(textDomObject.stringBuilder);
     }
   }
 
   private static Layout createLayoutFromEditable(WXTextDomObject textDomObject, float width, TextPaint
       textPaint) {
     Layout layout;
-    BoringLayout.Metrics boring = BoringLayout.isBoring(textDomObject.sb, textPaint);
-    float desiredWidth = boring == null ? Layout.getDesiredWidth(textDomObject.sb, textPaint) : Float.NaN;
+    BoringLayout.Metrics boring = BoringLayout.isBoring(textDomObject.spannableStringBuilder, textPaint);
+    float desiredWidth = boring == null ? Layout.getDesiredWidth(textDomObject.spannableStringBuilder, textPaint) : Float.NaN;
     if (CSSConstants.isUndefined(width)) {
       if (boring == null) {
-        layout = new StaticLayout(textDomObject.sb, textPaint,
+        layout = new StaticLayout(textDomObject.spannableStringBuilder, textPaint,
                                   (int) Math.ceil(desiredWidth),
                                   Layout.Alignment.ALIGN_NORMAL, 1, 0, false);
       } else {
-        layout = BoringLayout.make(textDomObject.sb, textPaint, boring.width,
+        layout = BoringLayout.make(textDomObject.spannableStringBuilder, textPaint, boring.width,
                                    Layout.Alignment.ALIGN_NORMAL, 1, 0, boring, false);
       }
     } else {
-      layout = new StaticLayout(textDomObject.sb, textPaint, (int) width,
+      layout = new StaticLayout(textDomObject.spannableStringBuilder, textPaint, (int) width,
                                 Layout.Alignment.ALIGN_NORMAL, 1, 0, false);
     }
     if (textDomObject.mNumberOfLines != UNSET && textDomObject.mNumberOfLines < layout.getLineCount()) {
       int textEnd = layout.getLineEnd(textDomObject.mNumberOfLines - 1);
       textEnd = textEnd + 1 < layout.getText().length() ? textEnd + 1 : textEnd;
-      layout = new StaticLayout(textDomObject.sb, 0, textEnd, textPaint, layout.getWidth(),
+      layout = new StaticLayout(textDomObject.spannableStringBuilder, 0, textEnd, textPaint, layout.getWidth(),
                                 Layout.Alignment.ALIGN_NORMAL, 1, 0, false);
     }
     return layout;
@@ -167,7 +191,7 @@ public class WXTextDomObject extends WXDomObject {
   public void layoutBefore() {
     hasBeenLayout = false;
     initData();
-    buildEditable();
+    updateSpannableStringBuilder(mText);
     super.dirty();
     super.layoutBefore();
   }
@@ -176,14 +200,14 @@ public class WXTextDomObject extends WXDomObject {
   public void layoutAfter() {
     if (!hasBeenLayout) {
       hasBeenLayout = true;
-      layout = createLayoutFromEditable(this, getLayoutWidth(), sTextPaintInstance);
+      layout=createLayoutFromEditable(this, getLayoutWidth(), sTextPaintInstance);
     }
     super.layoutAfter();
   }
 
   @Override
   public Object getExtra() {
-    return sb;
+    return spannableStringBuilder;
   }
 
   @Override
@@ -224,7 +248,7 @@ public class WXTextDomObject extends WXDomObject {
       }
     }
     if (dom != null) {
-      dom.sb = sb;
+      dom.spannableStringBuilder = spannableStringBuilder;
     }
     return dom;
   }
@@ -264,32 +288,33 @@ public class WXTextDomObject extends WXDomObject {
         mFontFamily = WXStyle.getFontFamily(style);
       }
       mAlignment = WXStyle.getTextAlignment(style);
+      textOverflow = WXStyle.getTextOverflow(style);
     }
   }
 
-  protected Editable buildEditable() {
+  protected Editable updateSpannableStringBuilder(CharSequence charSequence) {
     List<SetSpanOperation> ops = new ArrayList<>();
-    sb.clear();
-    sb.clearSpans();
-    buildSpannedFromTextCSSNode(sb, ops);
+    spannableStringBuilder.clear();
+    spannableStringBuilder.clearSpans();
+    buildSpannableStringBuilder(charSequence, ops);
     if (mFontSize == UNSET) {
-      sb.setSpan(
-          new AbsoluteSizeSpan(WXText.sDEFAULT_SIZE), 0, sb
+      spannableStringBuilder.setSpan(
+          new AbsoluteSizeSpan(WXText.sDEFAULT_SIZE), 0, spannableStringBuilder
               .length(), Spannable.SPAN_INCLUSIVE_EXCLUSIVE);
     }
     for (int i = ops.size() - 1; i >= 0; i--) {
       SetSpanOperation op = ops.get(i);
-      op.execute(sb);
+      op.execute(spannableStringBuilder);
     }
-    return sb;
+    return spannableStringBuilder;
   }
 
-  private void buildSpannedFromTextCSSNode(SpannableStringBuilder sb, List<SetSpanOperation> ops) {
+  private void buildSpannableStringBuilder(CharSequence charSequence, List<SetSpanOperation> ops) {
     int start = 0;
-    if (mText != null) {
-      sb.append(mText);
+    if (charSequence != null) {
+      spannableStringBuilder.append(charSequence);
     }
-    int end = sb.length();
+    int end = spannableStringBuilder.length();
     if (end >= start) {
       if (mTextDecoration == WXTextDecoration.UNDERLINE) {
         ops.add(new SetSpanOperation(start, end,

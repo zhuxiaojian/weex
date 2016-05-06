@@ -325,6 +325,15 @@ public class WXStyle extends ConcurrentHashMap<String, Object> {
     return alignment;
   }
 
+  public static TextUtils.TruncateAt getTextOverflow(Map<String, Object> style){
+    TextUtils.TruncateAt truncateAt=null;
+    String ellipse = (String) style.get(WXDomPropConstant.WX_TEXT_OVERFLOW);
+    if(TextUtils.equals(WXDomPropConstant.WX_TEXT_ELLIPSIS,ellipse)){
+      truncateAt = TextUtils.TruncateAt.END;
+    }
+    return truncateAt;
+  }
+
   public static int getLines(Map<String, Object> style) {
     return WXUtils.getInt(style.get(WXDomPropConstant.WX_LINES));
   }
