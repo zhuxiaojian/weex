@@ -401,7 +401,7 @@ class WXDomStatement {
   }
 
   private void layoutAfter(WXDomObject dom){
-    if (dom == null || mDestroy) {
+    if (dom == null || !dom.hasUpdate() || mDestroy) {
       return;
     }
     dom.layoutAfter();
